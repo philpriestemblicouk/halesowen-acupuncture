@@ -99,6 +99,16 @@ async function saveScheduleDay(dayOfWeek, startTime, endTime, isActive) {
     await supabase.from("schedule").insert({ day_of_week: dayOfWeek, start_time: startTime, end_time: endTime, is_active: isActive });
   }
 }
+async function deleteUser(userId) {
+  const { error } = await supabase.from("users").delete().eq("id", userId);
+  return !error;
+}
+function makePlaceholderEmail() {
+  return `noemail-${Date.now()}-${Math.random().toString(36).slice(2,6)}@manual`;
+}
+function isManualEmail(email) {
+  return email && email.startsWith("noemail-") && email.endsWith("@manual");
+}
 
 const C = {
   bg:"linear-gradient(135deg,#030d1f 0%,#050f22 40%,#040c1c 100%)",
@@ -452,12 +462,15 @@ function ScheduleTab() {
 function AdminPanel({ onLogout }) {
   const today=new Date();
   const [tab,setTab]=useState("bookings"); const [bookings,setBookings]=useState([]); const [patients,setPatients]=useState([]); const [loading,setLoading]=useState(true);
-  const [aEmail,setAEmail]=useState(""); const [aTreat,setATreat]=useState(TREATMENTS[0]);
+  const [aEmail,setAEmail]=useState(""); const [aName,setAName]=useState(""); const [aTreat,setATreat]=useState(TREATMENTS[0]);
   const [aMonth,setAMonth]=useState(today.getMonth()); const [aYear,setAYear]=useState(today.getFullYear());
   const [aDate,setADate]=useState(null); const [aTime,setATime]=useState(null);
   const [aSlots,setASlots]=useState([]); const [aBlocked,setABlocked]=useState(new Set());
   const [aNotes,setANotes]=useState(""); const [addErr,setAddErr]=useState(""); const [addOk,setAddOk]=useState("");
   const [schedule,setSchedule]=useState([]);
+  const [showAddPatient,setShowAddPatient]=useState(false);
+  const [pName,setPName]=useState(""); const [pEmail,setPEmail]=useState(""); const [pPhone,setPPhone]=useState(""); const [pHasInitial,setPHasInitial]=useState(false);
+  const [patientErr,setPatientErr]=useState(""); const [patientOk,setPatientOk]=useState("");
 
   const loadAll=async()=>{ setLoading(true); setBookings(await getAllBookings()); setPatients(await getAllUsers()); setSchedule(await getSchedule()); setLoading(false); };
   useEffect(()=>{ loadAll(); },[]);
@@ -479,15 +492,39 @@ function AdminPanel({ onLogout }) {
 
   const addBooking=async()=>{
     setAddErr(""); setAddOk("");
-    if(!aEmail){ setAddErr("Enter patient email."); return; }
+    const emailVal=aEmail.trim().toLowerCase(); const nameVal=aName.trim();
+    if(!nameVal&&!emailVal){ setAddErr("Enter patient name or email."); return; }
     if(!aDate||!aTime){ setAddErr("Select a date and time."); return; }
-    let u=await getUser(aEmail); if(!u) u=await createUser(aEmail,aEmail,"");
-    const booking={ id:"ACP-"+Math.random().toString(36).substring(2,8).toUpperCase(), treatment:aTreat.name, practitioner:"Lucy Priest", date:`${MONTHS[aMonth]} ${aDate}, ${aYear}`, time:aTime, duration:aTreat.duration, deposit_paid:0, notes:aNotes, source:"admin", patient_name:u?.name||aEmail, patient_email:aEmail.toLowerCase() };
+    let u=null;
+    if(emailVal){ u=await getUser(emailVal); if(!u) u=await createUser(emailVal,nameVal||emailVal,""); }
+    else { u=await createUser(makePlaceholderEmail(),nameVal,""); }
+    if(!u){ setAddErr("Failed to create patient record."); return; }
+    const booking={ id:"ACP-"+Math.random().toString(36).substring(2,8).toUpperCase(), treatment:aTreat.name, practitioner:"Lucy Priest", date:`${MONTHS[aMonth]} ${aDate}, ${aYear}`, time:aTime, duration:aTreat.duration, deposit_paid:0, notes:aNotes, source:"admin", patient_name:u.name||nameVal||emailVal, patient_email:u.email };
     const ok=await insertBooking(booking);
     if(!ok){ setAddErr("Failed to save. Please try again."); return; }
-    if(aTreat.initialOnly) await updateUserInitial(aEmail);
-    setAddOk(`✓ Booking ${booking.id} added for ${aEmail}`);
-    setADate(null); setATime(null); setANotes(""); setAEmail("");
+    if(aTreat.initialOnly||aTreat.requiresInitial) await updateUserInitial(u.email);
+    setAddOk(`✓ Booking ${booking.id} added for ${u.name}`);
+    setADate(null); setATime(null); setANotes(""); setAEmail(""); setAName("");
+    loadAll();
+  };
+
+  const handleDeletePatient=async(patientId,patientName)=>{
+    if(!window.confirm(`Delete patient "${patientName}"? Their existing bookings will remain.`)) return;
+    const ok=await deleteUser(patientId);
+    if(ok) loadAll();
+  };
+
+  const handleAddPatient=async()=>{
+    setPatientErr(""); setPatientOk("");
+    if(!pName.trim()){ setPatientErr("Patient name is required."); return; }
+    const emailVal=pEmail.trim().toLowerCase();
+    if(emailVal){ const existing=await getUser(emailVal); if(existing){ setPatientErr("A patient with this email already exists."); return; } }
+    const storeEmail=emailVal||makePlaceholderEmail();
+    const u=await createUser(storeEmail,pName.trim()+(pPhone.trim()?` — ${pPhone.trim()}`:""),"");
+    if(!u){ setPatientErr("Failed to add patient. Please try again."); return; }
+    if(pHasInitial) await updateUserInitial(storeEmail);
+    setPatientOk(`✓ ${pName} added successfully.`);
+    setPName(""); setPEmail(""); setPPhone(""); setPHasInitial(false); setShowAddPatient(false);
     loadAll();
   };
 
@@ -545,22 +582,62 @@ function AdminPanel({ onLogout }) {
 
         {tab==="patients"&&(
           <div style={SS.card}>
-            <div style={SS.secT}>Registered Patients ({patients.length})</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px"}}>
+              <div style={{...SS.secT,margin:0}}>Registered Patients ({patients.length})</div>
+              <button style={{...SS.btnP(true),padding:"8px 16px",fontSize:"11px"}} onClick={()=>{setShowAddPatient(s=>!s);setPatientErr("");setPatientOk("");}}>
+                {showAddPatient?"Cancel":"+ Add Patient"}
+              </button>
+            </div>
+            {showAddPatient&&(
+              <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(77,166,255,0.2)",borderRadius:"12px",padding:"18px",marginBottom:"20px"}}>
+                <div style={{fontSize:"10px",letterSpacing:"2px",textTransform:"uppercase",color:C.acc,marginBottom:"14px"}}>New Patient</div>
+                <div style={SS.ig}><label style={SS.lbl}>Full Name *</label><input style={SS.inp} value={pName} onChange={e=>setPName(e.target.value)} placeholder="Jane Smith"/></div>
+                <div style={SS.r2}>
+                  <div style={SS.ig}><label style={SS.lbl}>Email (optional)</label><input style={SS.inp} type="email" value={pEmail} onChange={e=>setPEmail(e.target.value)} placeholder="jane@example.com"/></div>
+                  <div style={SS.ig}><label style={SS.lbl}>Phone (optional)</label><input style={SS.inp} value={pPhone} onChange={e=>setPPhone(e.target.value)} placeholder="+44 7700 000000"/></div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px",cursor:"pointer"}} onClick={()=>setPHasInitial(v=>!v)}>
+                  <div style={{width:"18px",height:"18px",borderRadius:"4px",border:`1px solid ${pHasInitial?C.acc:"rgba(77,166,255,0.3)"}`,background:pHasInitial?"rgba(77,166,255,0.2)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",color:C.acc}}>{pHasInitial?"✓":""}</div>
+                  <span style={{fontSize:"12px",color:C.muted}}>Initial consultation already completed</span>
+                </div>
+                {patientErr&&<div style={SS.err}>{patientErr}</div>}
+                {patientOk&&<div style={{color:"#6dd06d",fontSize:"12px",marginBottom:"8px"}}>{patientOk}</div>}
+                <button style={SS.btnP(true)} onClick={handleAddPatient}>Add Patient</button>
+              </div>
+            )}
             {loading&&<div style={{color:C.muted,fontSize:"13px"}}>Loading…</div>}
             {!loading&&patients.length===0&&<div style={{color:C.muted,fontSize:"13px"}}>No registered patients yet.</div>}
-            {patients.map(p=>(
-              <div key={p.email} style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(77,166,255,0.1)",marginBottom:"8px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}}>
-                <div><div style={{fontSize:"13px",color:"#f0ebe0",marginBottom:"2px"}}>{p.name}</div><div style={{fontSize:"12px",color:C.muted}}>{p.email}</div></div>
-                <span style={SS.badge(p.has_initial)}>{p.has_initial?"✓ Initial Complete":"Awaiting Initial"}</span>
-              </div>
-            ))}
+            {patients.map(p=>{
+              const noEmail=isManualEmail(p.email);
+              const displayName=noEmail?p.name.split(" — ")[0]:p.name;
+              const displayPhone=noEmail&&p.name.includes(" — ")?p.name.split(" — ")[1]:null;
+              return (
+                <div key={p.id||p.email} style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(77,166,255,0.1)",marginBottom:"8px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}}>
+                  <div>
+                    <div style={{fontSize:"13px",color:"#f0ebe0",marginBottom:"2px"}}>{displayName}</div>
+                    <div style={{fontSize:"12px",color:C.muted}}>{noEmail?"No email"+(displayPhone?" · "+displayPhone:""):p.email}</div>
+                  </div>
+                  <div style={{display:"flex",gap:"8px",alignItems:"center",flexShrink:0}}>
+                    <span style={SS.badge(p.has_initial)}>{p.has_initial?"✓ Initial Complete":"Awaiting Initial"}</span>
+                    <button onClick={()=>handleDeletePatient(p.id,displayName)} style={{padding:"5px 12px",background:"transparent",border:"1px solid rgba(255,100,100,0.3)",borderRadius:"6px",color:"#ff8888",cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>Delete</button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
         {tab==="add"&&(
           <div style={SS.card}>
-            <div style={SS.secT}>Add Appointment Manually</div>
-            <div style={SS.ig}><label style={SS.lbl}>Patient Email *</label><input style={SS.inp} value={aEmail} onChange={e=>setAEmail(e.target.value)} placeholder="patient@example.com"/><div style={{fontSize:"11px",color:C.muted,marginTop:"5px"}}>If they don't have an account, one will be created automatically.</div></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px"}}>
+              <div style={{...SS.secT,margin:0}}>Add Appointment Manually</div>
+              <div style={{padding:"4px 10px",background:"rgba(77,166,255,0.1)",border:"1px solid rgba(77,166,255,0.3)",borderRadius:"6px",fontSize:"10px",color:C.acc,letterSpacing:"1px"}}>Admin Override Active</div>
+            </div>
+            <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(77,166,255,0.15)",borderRadius:"8px",padding:"10px 14px",marginBottom:"16px",fontSize:"11px",color:C.muted}}>All treatments are available regardless of patient history. Email is optional for walk-in or phone patients.</div>
+            <div style={SS.r2}>
+              <div style={SS.ig}><label style={SS.lbl}>Patient Name *</label><input style={SS.inp} value={aName} onChange={e=>setAName(e.target.value)} placeholder="Jane Smith"/></div>
+              <div style={SS.ig}><label style={SS.lbl}>Email (optional)</label><input style={SS.inp} value={aEmail} onChange={e=>setAEmail(e.target.value)} placeholder="jane@example.com"/></div>
+            </div>
             <div style={SS.ig}><label style={SS.lbl}>Treatment *</label>
               <select style={{...SS.inp,appearance:"none"}} value={aTreat.id} onChange={e=>{setATreat(TREATMENTS.find(t=>t.id===parseInt(e.target.value)));setADate(null);setATime(null);}}>
                 {TREATMENTS.map(t=><option key={t.id} value={t.id}>{t.name} — {t.duration}min (£{t.price})</option>)}
