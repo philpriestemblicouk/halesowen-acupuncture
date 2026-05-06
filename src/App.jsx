@@ -57,12 +57,14 @@ function getDaysInMonth(y,m){ return new Date(y,m+1,0).getDate(); }
 function getFirstDay(y,m)   { return new Date(y,m,1).getDay(); }
 
 async function getUser(email) {
-  const { data } = await supabase.from("users").select("*").eq("email", email.toLowerCase()).single();
+  const { data } = await supabase.from("users").select("*").eq("email", email.toLowerCase()).maybeSingle();
   return data;
 }
 async function createUser(email, name, passwordHash, phone = null) {
   const row = { email: email.toLowerCase(), name, password_hash: passwordHash, has_initial: false };
   if (phone) row.phone = phone;
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  if (authUser?.id) row.user_id = authUser.id;
   const { data } = await supabase.from("users").insert(row).select().single();
   return data;
 }
@@ -321,7 +323,7 @@ function BookingFlow({ user, onLogout }) {
   const [bookingRef,setBookingRef]=useState("");
 
   useEffect(()=>{
-    getUser(user.email).then(u=>{ console.log('user profile loaded:', u); if(u){ setHasInit(u.has_initial||false); if(u.phone) setForm(f=>({...f,phone:u.phone})); } });
+    getUser(user.email).then(u=>{ if(u){ setHasInit(u.has_initial||false); if(u.phone) setForm(f=>({...f,phone:u.phone})); } });
     getSchedule().then(setSchedule);
   },[user.email]);
 
