@@ -713,7 +713,8 @@ function AdminPanel({ onLogout }) {
     loadAll();
   };
 
-  const handleDeletePatient=async(patientId,patientName)=>{
+  const handleDeletePatient=async(patientId,patientName,patientEmail)=>{
+    if(patientEmail==="admin@halesowenacupuncture.co.uk") return;
     if(!window.confirm(`Delete patient "${patientName}"? Their existing bookings will remain.`)) return;
     const ok=await deleteUser(patientId);
     if(ok) loadAll();
@@ -945,7 +946,7 @@ function AdminPanel({ onLogout }) {
                   </div>
                   <div style={{display:"flex",gap:"8px",alignItems:"center",flexShrink:0}}>
                     <span style={SS.badge(p.has_initial)}>{p.has_initial?"✓ Initial Complete":"Awaiting Initial"}</span>
-                    <button onClick={()=>handleDeletePatient(p.id,displayName)} style={{padding:"5px 12px",background:"transparent",border:"1px solid rgba(255,100,100,0.3)",borderRadius:"6px",color:"#ff8888",cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>Delete</button>
+                    {p.email!=="admin@halesowenacupuncture.co.uk"&&<button onClick={()=>handleDeletePatient(p.id,displayName,p.email)} style={{padding:"5px 12px",background:"transparent",border:"1px solid rgba(255,100,100,0.3)",borderRadius:"6px",color:"#ff8888",cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>Delete</button>}
                   </div>
                 </div>
               );
