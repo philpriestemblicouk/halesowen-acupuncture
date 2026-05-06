@@ -648,7 +648,7 @@ function AdminPanel({ onLogout }) {
     setCalSlots(allSlots.map(slotStr=>{
       const slotStart=timeToMins(slotStr);
       for(const b of dayBookings){
-        const bStart=timeToMins(b.time); const bDur=TREATMENTS.find(t=>t.name===b.treatment)?.duration||60;
+        const bStart=timeToMins(b.time); const bDur=b.source==='blocked'?30:(TREATMENTS.find(t=>t.name===b.treatment)?.duration||60);
         if(slotStart>=bStart&&slotStart<bStart+bDur) return { slot:slotStr, booking:b, isStart:slotStart===bStart };
       }
       return { slot:slotStr, booking:null, isStart:false };
@@ -674,6 +674,16 @@ function AdminPanel({ onLogout }) {
   const nextEditM=()=>{ if(editMonth===11){setEditMonth(0);setEditYear(y=>y+1);}else setEditMonth(m=>m+1); setEditDate(null);setEditTime(null); };
 
   const saveSchedDay=async(dow)=>{ setSchedSaving(dow); setSchedSaveOk(""); const e=schedEdits[dow]; await saveScheduleDay(dow,e.start_time,e.end_time,e.is_active); setSchedSaving(null); setSchedSaveOk(`${DAY_NAMES[dow]} saved!`); setTimeout(()=>setSchedSaveOk(""),2500); loadAll(); };
+
+  const toggleBlockSlot=async(slotStr, existingBooking)=>{
+    if(existingBooking){
+      if(existingBooking.source!=='blocked') return;
+      await deleteBooking(existingBooking.id); loadAll(); return;
+    }
+    const dateStr=`${MONTHS[calMonth]} ${selCalDate}, ${calYear}`;
+    await insertBooking({ id:"BLK-"+Math.random().toString(36).substring(2,8).toUpperCase(), source:"blocked", date:dateStr, time:slotStr, treatment:"Initial Consultation", patient_name:"Unavailable", patient_email:"blocked@system", deposit_paid:0 });
+    loadAll();
+  };
 
   const openEdit=(booking)=>{ setSelBooking(booking); setEditMode(null); setEditErr(""); setEditOk(""); setEditDate(null); setEditTime(null); };
   const closeEdit=()=>{ setSelBooking(null); setEditMode(null); setEditErr(""); setEditOk(""); };
@@ -801,10 +811,20 @@ function AdminPanel({ onLogout }) {
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px"}} className="time-grid">
                     {calSlots.map(({slot,booking,isStart})=>{
                       const isSel=selBooking&&booking&&selBooking.id===booking.id;
+                      const isBlocked=booking&&booking.source==='blocked';
+                      const handleClick=()=>{
+                        if(isBlocked&&isStart){ toggleBlockSlot(slot,booking); }
+                        else if(!booking){ toggleBlockSlot(slot,null); }
+                        else if(booking&&isStart){ isSel?closeEdit():openEdit(booking); }
+                      };
                       return (
-                        <div key={slot} onClick={()=>booking&&isStart&&(isSel?closeEdit():openEdit(booking))} style={{padding:"10px 8px",borderRadius:"8px",background:isSel?"rgba(255,60,60,0.25)":booking?"rgba(255,60,60,0.12)":"rgba(50,200,100,0.08)",border:`2px solid ${isSel?"rgba(255,80,80,0.8)":booking?"rgba(255,80,80,0.3)":"rgba(50,200,100,0.2)"}`,minHeight:"58px",cursor:booking&&isStart?"pointer":"default",transition:"border 0.15s"}}>
-                          <div style={{fontSize:"11px",fontWeight:"bold",color:booking?"#ff8888":"#6dd06d",marginBottom:"3px"}}>{slot}</div>
-                          {booking&&isStart?(
+                        <div key={slot} onClick={handleClick} style={{padding:"10px 8px",borderRadius:"8px",background:isBlocked?"rgba(255,255,255,0.03)":isSel?"rgba(255,60,60,0.25)":booking?"rgba(255,60,60,0.12)":"rgba(50,200,100,0.08)",border:`2px solid ${isBlocked&&isStart?"rgba(255,255,255,0.15)":isBlocked?"rgba(255,255,255,0.06)":isSel?"rgba(255,80,80,0.8)":booking?"rgba(255,80,80,0.3)":"rgba(50,200,100,0.2)"}`,minHeight:"58px",cursor:(booking&&!isBlocked&&isStart)||isBlocked&&isStart||!booking?"pointer":"default",transition:"border 0.15s"}}>
+                          <div style={{fontSize:"11px",fontWeight:"bold",color:isBlocked?"rgba(255,255,255,0.2)":booking?"#ff8888":"#6dd06d",marginBottom:"3px"}}>{slot}</div>
+                          {isBlocked&&isStart?(
+                            <div style={{fontSize:"10px",color:"rgba(255,255,255,0.25)"}}>Unavailable <span style={{fontSize:"9px"}}>✕</span></div>
+                          ):isBlocked?(
+                            <div style={{fontSize:"9px",color:"rgba(255,255,255,0.1)"}}>—</div>
+                          ):booking&&isStart?(
                             <>
                               <div style={{fontSize:"11px",color:"#f0ebe0",lineHeight:"1.4",fontWeight:"500"}}>{booking.patient_name||booking.patient_email}</div>
                               <div style={{fontSize:"10px",color:"rgba(255,136,136,0.7)",marginTop:"2px"}}>{booking.treatment}</div>
