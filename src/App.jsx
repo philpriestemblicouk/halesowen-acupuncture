@@ -173,7 +173,21 @@ function AuthScreen({ onLogin }) {
       setLoading(false); onLogin({email:user.email,name:user.name,isAdmin:false});
     } else {
       const { error: authErr } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass });
-      if (authErr){ setErr("Invalid email or password."); setLoading(false); return; }
+      if (authErr) {
+        // Legacy account: try btoa password and migrate to Supabase Auth
+        const profile = await getUser(email);
+        if (profile && profile.password_hash && profile.password_hash === btoa(pass)) {
+          const { error: signUpErr } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password: pass });
+          if (!signUpErr) {
+            const { error: retryErr } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass });
+            if (!retryErr) {
+              await supabase.from("users").update({ password_hash: "" }).eq("email", email.trim().toLowerCase());
+              setLoading(false); onLogin({email:profile.email,name:profile.name,isAdmin:profile.is_admin||false}); return;
+            }
+          }
+        }
+        setErr("Invalid email or password."); setLoading(false); return;
+      }
       const user = await getUser(email);
       if (!user){ setErr("Account not found. Please register."); setLoading(false); return; }
       setLoading(false); onLogin({email:user.email,name:user.name,isAdmin:user.is_admin||false});
