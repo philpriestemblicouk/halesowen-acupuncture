@@ -3,14 +3,11 @@ import { supabase } from "./supabase.js";
 
 const ADMIN_EMAIL  = "admin@halesowenacupuncture.co.uk";
 const ADMIN_PASS   = "Halesowen2024!";
-const DEPOSIT_RATE = 0.50;
 const SLOT_INTERVAL = 30;
 
 const TREATMENTS = [
-  { id: 1, name: "Initial Consultation", duration: 90,  price: 120, description: "Comprehensive assessment & first treatment", initialOnly: true },
-  { id: 2, name: "Follow-up Session",    duration: 60,  price: 85,  description: "Ongoing treatment & progress check",         requiresInitial: true },
-  { id: 3, name: "Express Treatment",    duration: 30,  price: 55,  description: "Targeted relief for specific concerns",       requiresInitial: true },
-  { id: 4, name: "Cupping & Acupuncture",duration: 75,  price: 100, description: "Combined therapy for deep tension release",   requiresInitial: true },
+  { id: 1, name: "Initial Consultation", duration: 90, price: 70, description: "Comprehensive assessment & first treatment", initialOnly: true,    deposit: 20, displayDuration: "90 min"      },
+  { id: 2, name: "Follow-up Session",    duration: 60, price: 55, description: "Ongoing treatment & progress check",         requiresInitial: true, deposit: 0,  displayDuration: "45–60 min"  },
 ];
 
 const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -225,7 +222,7 @@ function BookingFlow({ user, onLogout }) {
     getBookingsForDate(dateStr).then(ex=>setBlocked(getBlockedSlots(ex, avail, treatment.duration)));
   },[selDate,treatment,schedule,viewMonth,viewYear]);
 
-  const depositAmt = treatment ? Math.round(treatment.price * DEPOSIT_RATE) : 0;
+  const depositAmt = treatment ? treatment.deposit : 0;
   const isToday  = (d)=>d===today.getDate()&&viewMonth===today.getMonth()&&viewYear===today.getFullYear();
   const isPast   = (d)=>{ const dt=new Date(viewYear,viewMonth,d); dt.setHours(0,0,0,0); const t=new Date(); t.setHours(0,0,0,0); return dt<t; };
   const isUnavail= (d)=>{ const dow=new Date(viewYear,viewMonth,d).getDay(); const s=schedule.find(x=>x.day_of_week===dow); return !s||!s.is_active; };
@@ -237,7 +234,7 @@ function BookingFlow({ user, onLogout }) {
     if(step===1) return !!treatment;
     if(step===2) return !!selDate&&!!selTime;
     if(step===3) return !!(form.name&&form.email);
-    if(step===4) return card.number.replace(/\s/g,"").length===16&&card.expiry.length===5&&card.cvc.length>=3&&!!card.nameOnCard;
+    if(step===4) return depositAmt===0||(card.number.replace(/\s/g,"").length===16&&card.expiry.length===5&&card.cvc.length>=3&&!!card.nameOnCard);
     return false;
   };
   const doConfirm=async()=>{
@@ -259,7 +256,7 @@ function BookingFlow({ user, onLogout }) {
             <div style={{fontSize:"24px",fontFamily:"Palatino,serif",color:"#f0ebe0",marginBottom:"8px"}}>Appointment Confirmed</div>
             <div style={{fontSize:"13px",color:C.muted,marginBottom:"24px",lineHeight:"1.7"}}>See you soon, <strong style={{color:C.sub}}>{user.name.split(" ")[0]}</strong>!</div>
             <div style={SS.sumB}>
-              {[["Treatment",treatment.name],["With","Lucy Priest"],["Date & Time",`${MONTHS[viewMonth]} ${selDate}, ${viewYear} · ${selTime}`],["Deposit Paid",`£${depositAmt}`]].map(([l,v],i,a)=>(
+              {[["Treatment",treatment.name],["With","Lucy Priest"],["Date & Time",`${MONTHS[viewMonth]} ${selDate}, ${viewYear} · ${selTime}`],...(depositAmt>0?[["Deposit Paid",`£${depositAmt}`]]:[[" Balance Due",`£${treatment.price} at appointment`]])].map(([l,v],i,a)=>(
                 <div key={l} style={SS.sumR(i===a.length-1)}><span style={SS.sumL}>{l}</span><span style={{...SS.sumV,color:l==="Deposit Paid"?C.acc:C.text}}>{v}</span></div>
               ))}
             </div>
@@ -307,7 +304,7 @@ function BookingFlow({ user, onLogout }) {
                   {locked&&<div style={{position:"absolute",top:"10px",right:"10px",fontSize:"12px"}}>🔒</div>}
                   <div style={{fontSize:"14px",marginBottom:"3px",color:"#f0ebe0",fontFamily:"Palatino,serif"}}>{t.name}</div>
                   <div style={{fontSize:"11px",color:C.muted,marginBottom:"8px",lineHeight:"1.5"}}>{t.description}</div>
-                  <div style={{display:"flex",gap:"10px",fontSize:"11px",color:C.acc}}><span>⏱ {t.duration}min</span><span>£{t.price}</span></div>
+                  <div style={{display:"flex",gap:"10px",fontSize:"11px",color:C.acc}}><span>⏱ {t.displayDuration}</span><span>£{t.price}</span></div>
                   {locked&&<div style={{fontSize:"10px",color:"rgba(77,166,255,0.5)",marginTop:"4px"}}>Unlocks after initial consultation</div>}
                 </div>
               ); })}
@@ -349,7 +346,7 @@ function BookingFlow({ user, onLogout }) {
           <div style={SS.card}>
             <div style={SS.secT}>Your Details</div>
             <div style={SS.sumB}>
-              {[["Treatment",`${treatment?.name} · ${treatment?.duration}min`],["With","Lucy Priest"],["Date & Time",`${MONTHS[viewMonth]} ${selDate} · ${selTime}`]].map(([l,v],i,a)=>(
+              {[["Treatment",`${treatment?.name} · ${treatment?.displayDuration}`],["With","Lucy Priest"],["Date & Time",`${MONTHS[viewMonth]} ${selDate} · ${selTime}`]].map(([l,v],i,a)=>(
                 <div key={l} style={SS.sumR(i===a.length-1)}><span style={SS.sumL}>{l}</span><span style={SS.sumV}>{v}</span></div>
               ))}
             </div>
@@ -364,37 +361,49 @@ function BookingFlow({ user, onLogout }) {
 
         {step===4&&(
           <div style={SS.card}>
-            <div style={SS.secT}>Secure Your Appointment</div>
-            <div style={{background:`linear-gradient(135deg,rgba(77,166,255,0.08),rgba(33,150,243,0.05))`,border:`1px solid ${C.bord2}`,borderRadius:"12px",padding:"16px 18px",marginBottom:"18px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div>
-                <div style={{fontSize:"11px",color:C.muted,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"3px"}}>Deposit Due Today</div>
-                <div style={{fontSize:"26px",color:C.acc,fontFamily:"Palatino,serif"}}>£{depositAmt}</div>
-                <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>50% of £{treatment?.price} · balance due at appointment</div>
-              </div>
-              <div style={{width:"48px",height:"48px",borderRadius:"10px",background:"rgba(77,166,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px"}}>💳</div>
+            <div style={SS.secT}>{depositAmt>0?"Secure Your Appointment":"Confirm Your Appointment"}</div>
+            <div style={SS.sumB}>
+              {[["Treatment",`${treatment?.name} · ${treatment?.displayDuration}`],["With","Lucy Priest"],["Date & Time",`${MONTHS[viewMonth]} ${selDate} · ${selTime}`],["Full Price",`£${treatment?.price}`]].map(([l,v],i,a)=>(
+                <div key={l} style={SS.sumR(i===a.length-1)}><span style={SS.sumL}>{l}</span><span style={SS.sumV}>{v}</span></div>
+              ))}
             </div>
-            <div style={{background:"linear-gradient(135deg,#0d1e38,#061428)",border:`1px solid rgba(77,166,255,0.2)`,borderRadius:"14px",padding:"18px",marginBottom:"16px"}}>
-              <div style={{width:"30px",height:"22px",background:"linear-gradient(135deg,#d4af37,#b8962e)",borderRadius:"4px",marginBottom:"12px"}}/>
-              <div style={{fontSize:"14px",letterSpacing:"3px",color:C.text,marginBottom:"12px",fontFamily:"monospace"}}>{card.number||"•••• •••• •••• ••••"}</div>
-              <div style={{display:"flex",justifyContent:"space-between"}}>
-                <div><div style={{fontSize:"8px",color:C.muted,letterSpacing:"1px",textTransform:"uppercase"}}>Card Holder</div><div style={{fontSize:"11px",color:C.muted,letterSpacing:"2px",textTransform:"uppercase"}}>{card.nameOnCard||"YOUR NAME"}</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontSize:"8px",color:C.muted,letterSpacing:"1px",textTransform:"uppercase"}}>Expires</div><div style={{fontSize:"12px",color:C.sub,fontFamily:"monospace"}}>{card.expiry||"MM/YY"}</div></div>
-              </div>
-            </div>
-            <div style={SS.ig}><label style={SS.lbl}>Name on Card *</label><input style={SS.inp} value={card.nameOnCard} onChange={e=>setCard({...card,nameOnCard:e.target.value})} placeholder="Jane Smith"/></div>
-            <div style={SS.ig}><label style={SS.lbl}>Card Number *</label><input style={SS.inp} value={card.number} onChange={e=>setCard({...card,number:fmtCard(e.target.value)})} placeholder="1234 5678 9012 3456" maxLength={19}/></div>
-            <div style={SS.r2}>
-              <div style={SS.ig}><label style={SS.lbl}>Expiry *</label><input style={SS.inp} value={card.expiry} onChange={e=>setCard({...card,expiry:fmtExp(e.target.value)})} placeholder="MM/YY" maxLength={5}/></div>
-              <div style={SS.ig}><label style={SS.lbl}>CVC *</label><input style={SS.inp} value={card.cvc} onChange={e=>setCard({...card,cvc:e.target.value.replace(/\D/g,"").slice(0,4)})} placeholder="123" maxLength={4}/></div>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:"6px",fontSize:"11px",color:C.muted,marginTop:"12px"}}>🔒 Payment is encrypted & secure.</div>
+            {depositAmt>0?(
+              <>
+                <div style={{background:`linear-gradient(135deg,rgba(77,166,255,0.08),rgba(33,150,243,0.05))`,border:`1px solid ${C.bord2}`,borderRadius:"12px",padding:"16px 18px",marginBottom:"16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div>
+                    <div style={{fontSize:"11px",color:C.muted,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"3px"}}>Booking Deposit</div>
+                    <div style={{fontSize:"26px",color:C.acc,fontFamily:"Palatino,serif"}}>£{depositAmt}</div>
+                    <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>Balance of £{treatment?.price-depositAmt} due at appointment</div>
+                  </div>
+                  <div style={{width:"48px",height:"48px",borderRadius:"10px",background:"rgba(77,166,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px"}}>💳</div>
+                </div>
+                <div style={{background:"rgba(255,160,50,0.06)",border:"1px solid rgba(255,160,50,0.2)",borderRadius:"8px",padding:"10px 14px",marginBottom:"16px",fontSize:"11px",color:"#c8a060"}}>⚠ This deposit is non-refundable if you cancel within 48 hours of your appointment.</div>
+                <div style={{background:"linear-gradient(135deg,#0d1e38,#061428)",border:`1px solid rgba(77,166,255,0.2)`,borderRadius:"14px",padding:"18px",marginBottom:"16px"}}>
+                  <div style={{width:"30px",height:"22px",background:"linear-gradient(135deg,#d4af37,#b8962e)",borderRadius:"4px",marginBottom:"12px"}}/>
+                  <div style={{fontSize:"14px",letterSpacing:"3px",color:C.text,marginBottom:"12px",fontFamily:"monospace"}}>{card.number||"•••• •••• •••• ••••"}</div>
+                  <div style={{display:"flex",justifyContent:"space-between"}}>
+                    <div><div style={{fontSize:"8px",color:C.muted,letterSpacing:"1px",textTransform:"uppercase"}}>Card Holder</div><div style={{fontSize:"11px",color:C.muted,letterSpacing:"2px",textTransform:"uppercase"}}>{card.nameOnCard||"YOUR NAME"}</div></div>
+                    <div style={{textAlign:"right"}}><div style={{fontSize:"8px",color:C.muted,letterSpacing:"1px",textTransform:"uppercase"}}>Expires</div><div style={{fontSize:"12px",color:C.sub,fontFamily:"monospace"}}>{card.expiry||"MM/YY"}</div></div>
+                  </div>
+                </div>
+                <div style={SS.ig}><label style={SS.lbl}>Name on Card *</label><input style={SS.inp} value={card.nameOnCard} onChange={e=>setCard({...card,nameOnCard:e.target.value})} placeholder="Jane Smith"/></div>
+                <div style={SS.ig}><label style={SS.lbl}>Card Number *</label><input style={SS.inp} value={card.number} onChange={e=>setCard({...card,number:fmtCard(e.target.value)})} placeholder="1234 5678 9012 3456" maxLength={19}/></div>
+                <div style={SS.r2}>
+                  <div style={SS.ig}><label style={SS.lbl}>Expiry *</label><input style={SS.inp} value={card.expiry} onChange={e=>setCard({...card,expiry:fmtExp(e.target.value)})} placeholder="MM/YY" maxLength={5}/></div>
+                  <div style={SS.ig}><label style={SS.lbl}>CVC *</label><input style={SS.inp} value={card.cvc} onChange={e=>setCard({...card,cvc:e.target.value.replace(/\D/g,"").slice(0,4)})} placeholder="123" maxLength={4}/></div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:"6px",fontSize:"11px",color:C.muted,marginTop:"12px"}}>🔒 Payment is encrypted & secure.</div>
+              </>
+            ):(
+              <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(77,166,255,0.15)",borderRadius:"8px",padding:"12px 16px",fontSize:"12px",color:C.muted}}>No deposit required — full payment of £{treatment?.price} is due at the appointment.</div>
+            )}
           </div>
         )}
 
         <div style={{display:"flex",gap:"10px",justifyContent:"flex-end",marginTop:"4px"}}>
           {step>1&&!processing&&<button style={SS.btnS} onClick={()=>setStep(s=>s-1)}>← Back</button>}
           {step<4?<button style={SS.btnP(canGo())} onClick={()=>canGo()&&setStep(s=>s+1)}>Continue →</button>
-            :<button style={SS.btnP(canGo()&&!processing)} onClick={()=>canGo()&&!processing&&doConfirm()}>{processing?"Processing…":`Pay £${depositAmt} & Confirm`}</button>}
+            :<button style={SS.btnP(canGo()&&!processing)} onClick={()=>canGo()&&!processing&&doConfirm()}>{processing?"Processing…":depositAmt>0?`Pay £${depositAmt} & Confirm`:"Confirm Appointment"}</button>}
         </div>
       </div>
     </div>
@@ -567,7 +576,7 @@ function AdminPanel({ onLogout }) {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:"8px"}}>
                   <div>
                     <div style={{fontSize:"13px",color:"#f0ebe0",marginBottom:"3px"}}><strong>{b.patient_name||b.patient_email}</strong> — {b.treatment}</div>
-                    <div style={{fontSize:"12px",color:C.muted}}>{b.date} · {b.time}{TREATMENTS.find(t=>t.name===b.treatment)?.duration?` (${TREATMENTS.find(t=>t.name===b.treatment).duration}min)`:""}</div>
+                    <div style={{fontSize:"12px",color:C.muted}}>{b.date} · {b.time}{TREATMENTS.find(t=>t.name===b.treatment)?.displayDuration?` (${TREATMENTS.find(t=>t.name===b.treatment).displayDuration})`:""}</div>
                     {b.notes&&<div style={{fontSize:"11px",color:"rgba(77,166,255,0.6)",marginTop:"3px"}}>Note: {b.notes}</div>}
                   </div>
                   <div style={{display:"flex",gap:"8px",alignItems:"center",flexShrink:0}}>
@@ -640,7 +649,7 @@ function AdminPanel({ onLogout }) {
             </div>
             <div style={SS.ig}><label style={SS.lbl}>Treatment *</label>
               <select style={{...SS.inp,appearance:"none"}} value={aTreat.id} onChange={e=>{setATreat(TREATMENTS.find(t=>t.id===parseInt(e.target.value)));setADate(null);setATime(null);}}>
-                {TREATMENTS.map(t=><option key={t.id} value={t.id}>{t.name} — {t.duration}min (£{t.price})</option>)}
+                {TREATMENTS.map(t=><option key={t.id} value={t.id}>{t.name} — {t.displayDuration} (£{t.price})</option>)}
               </select>
             </div>
             <label style={SS.lbl}>Date *</label>
