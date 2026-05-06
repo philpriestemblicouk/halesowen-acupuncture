@@ -3,7 +3,7 @@ import { supabase } from "./supabase.js";
 
 const ADMIN_EMAIL  = "admin@halesowenacupuncture.co.uk";
 const ADMIN_PASS   = "Halesowen2024!";
-const DEPOSIT_RATE = 0.25;
+const DEPOSIT_RATE = 0.50;
 const SLOT_INTERVAL = 30;
 
 const TREATMENTS = [
@@ -369,7 +369,7 @@ function BookingFlow({ user, onLogout }) {
               <div>
                 <div style={{fontSize:"11px",color:C.muted,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"3px"}}>Deposit Due Today</div>
                 <div style={{fontSize:"26px",color:C.acc,fontFamily:"Palatino,serif"}}>£{depositAmt}</div>
-                <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>25% of £{treatment?.price} · balance due at appointment</div>
+                <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>50% of £{treatment?.price} · balance due at appointment</div>
               </div>
               <div style={{width:"48px",height:"48px",borderRadius:"10px",background:"rgba(77,166,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px"}}>💳</div>
             </div>
