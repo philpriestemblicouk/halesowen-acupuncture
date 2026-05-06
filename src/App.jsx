@@ -321,7 +321,7 @@ function BookingFlow({ user, onLogout }) {
   const [bookingRef,setBookingRef]=useState("");
 
   useEffect(()=>{
-    getUser(user.email).then(u=>{ if(u) setHasInit(u.has_initial||false); });
+    getUser(user.email).then(u=>{ if(u){ setHasInit(u.has_initial||false); if(u.phone) setForm(f=>({...f,phone:u.phone})); } });
     getSchedule().then(setSchedule);
   },[user.email]);
 
