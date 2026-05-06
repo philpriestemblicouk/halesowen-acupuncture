@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase.js";
+import "./responsive.css";
 
 const ADMIN_EMAIL  = "admin@halesowenacupuncture.co.uk";
 const ADMIN_PASS   = "Halesowen2024!";
@@ -117,7 +118,7 @@ const SS = {
   app:  { minHeight:"100vh", background:C.bg, fontFamily:"Georgia,serif", color:C.text, position:"relative", overflowX:"hidden" },
   deco1:{ position:"fixed", top:"-20%", right:"-10%", width:"500px", height:"500px", borderRadius:"50%", background:"radial-gradient(circle,rgba(77,166,255,0.06) 0%,transparent 70%)", zIndex:0, pointerEvents:"none" },
   deco2:{ position:"fixed", bottom:"-20%", left:"-10%", width:"600px", height:"600px", borderRadius:"50%", background:"radial-gradient(circle,rgba(0,100,200,0.07) 0%,transparent 70%)", zIndex:0, pointerEvents:"none" },
-  wrap: { maxWidth:"720px", margin:"0 auto", padding:"40px 20px", position:"relative", zIndex:1 },
+  wrap: { maxWidth:"720px", margin:"0 auto", padding:"40px 20px", position:"relative", zIndex:1, boxSizing:"border-box" },
   card: { background:C.card, border:`1px solid ${C.bord}`, borderRadius:"16px", padding:"28px", marginBottom:"20px", backdropFilter:"blur(10px)" },
   hdr:  { textAlign:"center", marginBottom:"36px" },
   logoW:{ display:"inline-flex", alignItems:"center", gap:"10px", marginBottom:"8px" },
@@ -171,7 +172,7 @@ function AuthScreen({ onLogin }) {
   };
   return (
     <div style={SS.app}><div style={SS.deco1}/><div style={SS.deco2}/>
-      <div style={SS.wrap}>
+      <div style={SS.wrap} className="page-wrap">
         <Logo/>
         <h1 style={{...SS.title,textAlign:"center",marginBottom:"4px"}}>Welcome</h1>
         <p style={{...SS.sub,textAlign:"center",marginBottom:"28px"}}>Halesowen Acupuncture · Online Booking</p>
@@ -249,7 +250,7 @@ function BookingFlow({ user, onLogout }) {
 
   if(confirmed) return (
     <div style={SS.app}><div style={SS.deco1}/><div style={SS.deco2}/>
-      <div style={SS.wrap}><Logo/>
+      <div style={SS.wrap} className="page-wrap"><Logo/>
         <div style={SS.card}>
           <div style={{textAlign:"center",padding:"30px 0"}}>
             <div style={{width:"72px",height:"72px",borderRadius:"50%",background:`linear-gradient(135deg,${C.acc},${C.acc3})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"32px",margin:"0 auto 20px"}}>✓</div>
@@ -273,7 +274,7 @@ function BookingFlow({ user, onLogout }) {
 
   return (
     <div style={SS.app}><div style={SS.deco1}/><div style={SS.deco2}/>
-      <div style={SS.wrap}>
+      <div style={SS.wrap} className="page-wrap">
         <Logo/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px"}}>
           <div>
@@ -284,7 +285,7 @@ function BookingFlow({ user, onLogout }) {
         </div>
         <h2 style={{...SS.title,textAlign:"center",marginBottom:"4px"}}>Book Your Session</h2>
         <p style={{...SS.sub,textAlign:"center",marginBottom:"24px"}}>Traditional Acupuncture · Halesowen</p>
-        <div style={{display:"flex",justifyContent:"center",marginBottom:"28px",position:"relative"}}>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:"28px",position:"relative"}} className="steps-bar">
           <div style={{position:"absolute",top:"13px",left:"calc(10% + 13px)",right:"calc(10% + 13px)",height:"1px",background:"rgba(77,166,255,0.2)",zIndex:0}}/>
           {STEP_LABELS.map((label,i)=>{ const n=i+1; const a=step===n; const d=step>n; return (
             <div key={n} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"5px",flex:1,position:"relative",zIndex:1,cursor:d?"pointer":"default"}} onClick={()=>d&&setStep(n)}>
@@ -298,7 +299,7 @@ function BookingFlow({ user, onLogout }) {
           <div style={SS.card}>
             <div style={SS.secT}>Select a Treatment</div>
             {!hasInitial&&<div style={{background:"rgba(77,166,255,0.06)",border:"1px solid rgba(77,166,255,0.15)",borderRadius:"10px",padding:"12px 16px",marginBottom:"16px",fontSize:"12px",color:C.muted}}>ℹ️ As a new patient, please book the <strong style={{color:C.acc}}>Initial Consultation</strong> first. Other treatments unlock after your first visit.</div>}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}} className="treatment-grid">
               {TREATMENTS.map(t=>{ const locked=t.requiresInitial&&!hasInitial; const sel=treatment?.id===t.id; return (
                 <div key={t.id} style={{padding:"16px",borderRadius:"12px",border:sel?`1px solid ${C.acc}`:"1px solid rgba(255,255,255,0.08)",background:sel?"rgba(77,166,255,0.08)":locked?"rgba(255,255,255,0.01)":"rgba(255,255,255,0.02)",cursor:locked?"not-allowed":"pointer",opacity:locked?0.45:1,position:"relative"}} onClick={()=>!locked&&setTreatment(t)}>
                   {locked&&<div style={{position:"absolute",top:"10px",right:"10px",fontSize:"12px"}}>🔒</div>}
@@ -330,7 +331,7 @@ function BookingFlow({ user, onLogout }) {
             {selDate&&slots.length===0&&<div style={{fontSize:"12px",color:C.muted,textAlign:"center",padding:"12px"}}>No availability on this day.</div>}
             {selDate&&slots.length>0&&<>
               <div style={{fontSize:"10px",letterSpacing:"2px",textTransform:"uppercase",color:C.muted,marginBottom:"10px"}}>Available times · {MONTHS[viewMonth]} {selDate}</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"7px"}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"7px"}} className="time-grid">
                 {slots.map(t=>{ const un=blocked.has(t); const sel=selTime===t; return (
                   <div key={t} style={{padding:"10px 6px",textAlign:"center",borderRadius:"8px",fontSize:"11px",cursor:un?"not-allowed":"pointer",background:sel?C.acc:un?"transparent":"rgba(255,255,255,0.03)",color:sel?C.dark:un?"rgba(255,255,255,0.2)":"#c8c0b0",border:sel?"none":un?"1px dashed rgba(255,100,100,0.2)":"1px solid rgba(255,255,255,0.1)",fontWeight:sel?"bold":"normal"}} onClick={()=>{ if(!un)setSelTime(t); }}>
                     <div>{t}</div><div style={{fontSize:"9px",opacity:0.7}}>– {getEndTime(t,treatment.duration)}</div>
@@ -350,7 +351,7 @@ function BookingFlow({ user, onLogout }) {
                 <div key={l} style={SS.sumR(i===a.length-1)}><span style={SS.sumL}>{l}</span><span style={SS.sumV}>{v}</span></div>
               ))}
             </div>
-            <div style={SS.r2}>
+            <div style={SS.r2} className="r2">
               <div style={SS.ig}><label style={SS.lbl}>Full Name *</label><input style={SS.inp} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Jane Smith"/></div>
               <div style={SS.ig}><label style={SS.lbl}>Phone</label><input style={SS.inp} value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} placeholder="+44 7700 000000"/></div>
             </div>
@@ -388,7 +389,7 @@ function BookingFlow({ user, onLogout }) {
                 </div>
                 <div style={SS.ig}><label style={SS.lbl}>Name on Card *</label><input style={SS.inp} value={card.nameOnCard} onChange={e=>setCard({...card,nameOnCard:e.target.value})} placeholder="Jane Smith"/></div>
                 <div style={SS.ig}><label style={SS.lbl}>Card Number *</label><input style={SS.inp} value={card.number} onChange={e=>setCard({...card,number:fmtCard(e.target.value)})} placeholder="1234 5678 9012 3456" maxLength={19}/></div>
-                <div style={SS.r2}>
+                <div style={SS.r2} className="r2">
                   <div style={SS.ig}><label style={SS.lbl}>Expiry *</label><input style={SS.inp} value={card.expiry} onChange={e=>setCard({...card,expiry:fmtExp(e.target.value)})} placeholder="MM/YY" maxLength={5}/></div>
                   <div style={SS.ig}><label style={SS.lbl}>CVC *</label><input style={SS.inp} value={card.cvc} onChange={e=>setCard({...card,cvc:e.target.value.replace(/\D/g,"").slice(0,4)})} placeholder="123" maxLength={4}/></div>
                 </div>
@@ -543,8 +544,8 @@ function AdminPanel({ onLogout }) {
 
   return (
     <div style={SS.app}><div style={SS.deco1}/><div style={SS.deco2}/>
-      <div style={{...SS.wrap,maxWidth:"900px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"28px"}}>
+      <div style={{...SS.wrap,maxWidth:"900px"}} className="page-wrap">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"28px"}} className="admin-header">
           <div>
             <div style={{display:"inline-flex",alignItems:"center",gap:"10px"}}><div style={SS.logoI}>✦</div><span style={SS.logoT}>Halesowen Acupuncture</span></div>
             <div style={{fontSize:"11px",color:C.muted,marginTop:"4px",letterSpacing:"2px",textTransform:"uppercase"}}>Admin Dashboard</div>
@@ -552,7 +553,7 @@ function AdminPanel({ onLogout }) {
           <button style={SS.btnS} onClick={onLogout}>Sign Out</button>
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px",marginBottom:"20px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px",marginBottom:"20px"}} className="stat-grid">
           {[["Total Bookings",bookings.length,"📅"],["Registered Patients",patients.length,"👤"],["Admin Added",bookings.filter(b=>b.source==="admin").length,"⚙️"]].map(([l,v,ic])=>(
             <div key={l} style={{...SS.card,padding:"20px",marginBottom:0,textAlign:"center"}}>
               <div style={{fontSize:"24px",marginBottom:"4px"}}>{ic}</div>
@@ -601,7 +602,7 @@ function AdminPanel({ onLogout }) {
               <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(77,166,255,0.2)",borderRadius:"12px",padding:"18px",marginBottom:"20px"}}>
                 <div style={{fontSize:"10px",letterSpacing:"2px",textTransform:"uppercase",color:C.acc,marginBottom:"14px"}}>New Patient</div>
                 <div style={SS.ig}><label style={SS.lbl}>Full Name *</label><input style={SS.inp} value={pName} onChange={e=>setPName(e.target.value)} placeholder="Jane Smith"/></div>
-                <div style={SS.r2}>
+                <div style={SS.r2} className="r2">
                   <div style={SS.ig}><label style={SS.lbl}>Email (optional)</label><input style={SS.inp} type="email" value={pEmail} onChange={e=>setPEmail(e.target.value)} placeholder="jane@example.com"/></div>
                   <div style={SS.ig}><label style={SS.lbl}>Phone (optional)</label><input style={SS.inp} value={pPhone} onChange={e=>setPPhone(e.target.value)} placeholder="+44 7700 000000"/></div>
                 </div>
@@ -621,7 +622,7 @@ function AdminPanel({ onLogout }) {
               const displayName=noEmail?p.name.split(" — ")[0]:p.name;
               const displayPhone=noEmail&&p.name.includes(" — ")?p.name.split(" — ")[1]:null;
               return (
-                <div key={p.id||p.email} style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(77,166,255,0.1)",marginBottom:"8px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}}>
+                <div key={p.id||p.email} style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(77,166,255,0.1)",marginBottom:"8px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}} className="patient-row">
                   <div>
                     <div style={{fontSize:"13px",color:"#f0ebe0",marginBottom:"2px"}}>{displayName}</div>
                     <div style={{fontSize:"12px",color:C.muted}}>{noEmail?"No email"+(displayPhone?" · "+displayPhone:""):p.email}</div>
@@ -643,7 +644,7 @@ function AdminPanel({ onLogout }) {
               <div style={{padding:"4px 10px",background:"rgba(77,166,255,0.1)",border:"1px solid rgba(77,166,255,0.3)",borderRadius:"6px",fontSize:"10px",color:C.acc,letterSpacing:"1px"}}>Admin Override Active</div>
             </div>
             <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(77,166,255,0.15)",borderRadius:"8px",padding:"10px 14px",marginBottom:"16px",fontSize:"11px",color:C.muted}}>All treatments are available regardless of patient history. Email is optional for walk-in or phone patients.</div>
-            <div style={SS.r2}>
+            <div style={SS.r2} className="r2">
               <div style={SS.ig}><label style={SS.lbl}>Patient Name *</label><input style={SS.inp} value={aName} onChange={e=>setAName(e.target.value)} placeholder="Jane Smith"/></div>
               <div style={SS.ig}><label style={SS.lbl}>Email (optional)</label><input style={SS.inp} value={aEmail} onChange={e=>setAEmail(e.target.value)} placeholder="jane@example.com"/></div>
             </div>
@@ -670,7 +671,7 @@ function AdminPanel({ onLogout }) {
             {aDate&&aSlots.length===0&&<div style={{fontSize:"12px",color:C.muted,marginBottom:"12px"}}>No slots for this day — check the Schedule tab.</div>}
             {aDate&&aSlots.length>0&&<>
               <label style={SS.lbl}>Time * — {MONTHS[aMonth]} {aDate}</label>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"7px",marginBottom:"16px"}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"7px",marginBottom:"16px"}} className="time-grid">
                 {aSlots.map(t=>{ const isBlocked=aBlocked.has(t); const isSel=aTime===t; return (
                   <div key={t} style={{padding:"9px 6px",textAlign:"center",borderRadius:"8px",fontSize:"11px",cursor:isBlocked?"not-allowed":"pointer",background:isSel?C.acc:isBlocked?"transparent":"rgba(255,255,255,0.03)",color:isSel?C.dark:isBlocked?"rgba(255,255,255,0.15)":"#c8c0b0",border:isSel?"none":isBlocked?"1px dashed rgba(255,100,100,0.2)":"1px solid rgba(255,255,255,0.1)",fontWeight:isSel?"bold":"normal"}} onClick={()=>{ if(!isBlocked)setATime(t); }}>
                     <div>{t}</div><div style={{fontSize:"9px",opacity:0.7}}>– {getEndTime(t,aTreat.duration)}</div>
