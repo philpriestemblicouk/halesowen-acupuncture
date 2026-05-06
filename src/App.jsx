@@ -60,9 +60,25 @@ async function getUser(email) {
   const { data } = await supabase.from("users").select("*").eq("email", email.toLowerCase()).single();
   return data;
 }
-async function createUser(email, name, passwordHash) {
-  const { data } = await supabase.from("users").insert({ email: email.toLowerCase(), name, password_hash: passwordHash, has_initial: false }).select().single();
+async function createUser(email, name, passwordHash, phone = null) {
+  const row = { email: email.toLowerCase(), name, password_hash: passwordHash, has_initial: false };
+  if (phone) row.phone = phone;
+  const { data } = await supabase.from("users").insert(row).select().single();
   return data;
+}
+async function updateUserPhone(email, phone) {
+  await supabase.from("users").update({ phone, phone_verified: true }).eq("email", email.toLowerCase());
+}
+function formatPhone(raw) {
+  const s = raw.replace(/[\s\-\(\)]/g, '');
+  if (s.startsWith('+')) return s;
+  if (s.startsWith('07') && s.length === 11) return '+44' + s.slice(1);
+  if (s.startsWith('7')  && s.length === 10) return '+44' + s;
+  return s.startsWith('0') ? '+44' + s.slice(1) : '+44' + s;
+}
+async function apiPost(path, body) {
+  const r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  return r.json();
 }
 async function updateUserInitial(email) {
   await supabase.from("users").update({ has_initial: true }).eq("email", email.toLowerCase());
@@ -155,44 +171,77 @@ function Logo() {
 }
 
 function AuthScreen({ onLogin }) {
-  const [mode,setMode]=useState("login"); const [email,setEmail]=useState(""); const [name,setName]=useState("");
-  const [pass,setPass]=useState(""); const [pass2,setPass2]=useState(""); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
-  const submit = async () => {
-    setErr(""); setLoading(true);
-    if (!email||!pass){ setErr("Please fill in all fields."); setLoading(false); return; }
-    if (mode==="register") {
-      if (!name){ setErr("Please enter your name."); setLoading(false); return; }
-      if (pass!==pass2){ setErr("Passwords do not match."); setLoading(false); return; }
-      if (pass.length<6){ setErr("Password must be at least 6 characters."); setLoading(false); return; }
-      const existing = await getUser(email);
-      if (existing){ setErr("An account with this email already exists."); setLoading(false); return; }
-      const { error: authErr } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password: pass });
-      if (authErr){ setErr(authErr.message); setLoading(false); return; }
-      const user = await createUser(email, name, "");
-      if (!user){ setErr("Registration failed. Please try again."); setLoading(false); return; }
-      setLoading(false); onLogin({email:user.email,name:user.name,isAdmin:false});
-    } else {
-      const { error: authErr } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass });
-      if (authErr) {
-        // Legacy account: try btoa password and migrate to Supabase Auth
-        const profile = await getUser(email);
-        if (profile && profile.password_hash && profile.password_hash === btoa(pass)) {
-          const { error: signUpErr } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password: pass });
-          if (!signUpErr) {
-            const { error: retryErr } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass });
-            if (!retryErr) {
-              await supabase.from("users").update({ password_hash: "" }).eq("email", email.trim().toLowerCase());
-              setLoading(false); onLogin({email:profile.email,name:profile.name,isAdmin:profile.is_admin||false}); return;
-            }
+  const [mode,setMode]=useState("login");
+  const [email,setEmail]=useState(""); const [name,setName]=useState("");
+  const [pass,setPass]=useState(""); const [pass2,setPass2]=useState("");
+  const [phone,setPhone]=useState(""); const [otp,setOtp]=useState("");
+  const [pendingUser,setPendingUser]=useState(null);
+  const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
+
+  const switchMode=(m)=>{ setMode(m); setErr(""); setOtp(""); };
+
+  const submitRegister = async () => {
+    if (!name)                   { setErr("Please enter your name."); return; }
+    if (pass!==pass2)            { setErr("Passwords do not match."); return; }
+    if (pass.length<6)           { setErr("Password must be at least 6 characters."); return; }
+    if (!phone.trim())           { setErr("Mobile number is required."); return; }
+    const fmtPhone = formatPhone(phone.trim());
+    if (fmtPhone.length < 10)    { setErr("Please enter a valid mobile number."); return; }
+    const existing = await getUser(email);
+    if (existing)                { setErr("An account with this email already exists."); return; }
+    const { error: authErr } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password: pass });
+    if (authErr)                 { setErr(authErr.message); return; }
+    const user = await createUser(email, name, "", fmtPhone);
+    if (!user)                   { setErr("Registration failed. Please try again."); return; }
+    const res = await apiPost('/api/send-otp', { phone: fmtPhone });
+    if (res.error)               { setErr("Couldn't send verification code: " + res.error); return; }
+    setPendingUser({ ...user, fmtPhone });
+    setMode("verify");
+  };
+
+  const submitVerify = async () => {
+    if (!otp.trim()) { setErr("Enter the 6-digit code."); return; }
+    const res = await apiPost('/api/verify-otp', { phone: pendingUser.fmtPhone, code: otp.trim() });
+    if (res.error)   { setErr(res.error); return; }
+    await updateUserPhone(pendingUser.email, pendingUser.fmtPhone);
+    onLogin({ email: pendingUser.email, name: pendingUser.name, isAdmin: false });
+  };
+
+  const submitLogin = async () => {
+    const { error: authErr } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass });
+    if (authErr) {
+      const profile = await getUser(email);
+      if (profile && profile.password_hash && profile.password_hash === btoa(pass)) {
+        const { error: upErr } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password: pass });
+        if (!upErr) {
+          const { error: retryErr } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass });
+          if (!retryErr) {
+            await supabase.from("users").update({ password_hash: "" }).eq("email", email.trim().toLowerCase());
+            onLogin({ email: profile.email, name: profile.name, isAdmin: profile.is_admin||false }); return;
           }
         }
-        setErr("Invalid email or password."); setLoading(false); return;
       }
-      const user = await getUser(email);
-      if (!user){ setErr("Account not found. Please register."); setLoading(false); return; }
-      setLoading(false); onLogin({email:user.email,name:user.name,isAdmin:user.is_admin||false});
+      setErr("Invalid email or password."); return;
     }
+    const user = await getUser(email);
+    if (!user) { setErr("Account not found. Please register."); return; }
+    onLogin({ email: user.email, name: user.name, isAdmin: user.is_admin||false });
   };
+
+  const submit = async () => {
+    setErr(""); setLoading(true);
+    if (!email||!pass) { setErr("Please fill in all fields."); setLoading(false); return; }
+    if (mode==="register") await submitRegister();
+    else await submitLogin();
+    setLoading(false);
+  };
+
+  const verify = async () => {
+    setErr(""); setLoading(true);
+    await submitVerify();
+    setLoading(false);
+  };
+
   return (
     <div style={SS.app}><div style={SS.deco1}/><div style={SS.deco2}/>
       <div style={SS.wrap} className="page-wrap">
@@ -200,17 +249,42 @@ function AuthScreen({ onLogin }) {
         <h1 style={{...SS.title,textAlign:"center",marginBottom:"4px"}}>Welcome</h1>
         <p style={{...SS.sub,textAlign:"center",marginBottom:"28px"}}>Halesowen Acupuncture · Online Booking</p>
         <div style={{...SS.card,maxWidth:"420px",margin:"0 auto 20px"}}>
-          <div style={SS.secT}>{mode==="login"?"Sign In":"Create Account"}</div>
-          {mode==="register"&&<div style={SS.ig}><label style={SS.lbl}>Full Name *</label><input style={SS.inp} value={name} onChange={e=>setName(e.target.value)} placeholder="Jane Smith"/></div>}
-          <div style={SS.ig}><label style={SS.lbl}>Email Address *</label><input style={SS.inp} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="jane@example.com"/></div>
-          <div style={SS.ig}><label style={SS.lbl}>Password *</label><input style={SS.inp} type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&submit()}/></div>
-          {mode==="register"&&<div style={SS.ig}><label style={SS.lbl}>Confirm Password *</label><input style={SS.inp} type="password" value={pass2} onChange={e=>setPass2(e.target.value)} placeholder="••••••••"/></div>}
-          {err&&<div style={SS.err}>{err}</div>}
-          <div style={{marginTop:"20px"}}><button style={SS.btnP(true)} onClick={submit} disabled={loading}>{loading?"Please wait…":mode==="login"?"Sign In":"Create Account"}</button></div>
-          <div style={{marginTop:"16px",fontSize:"12px",color:C.muted,textAlign:"center"}}>
-            {mode==="login"?<>No account? <span style={{color:C.acc,cursor:"pointer"}} onClick={()=>{setMode("register");setErr("");}}>Register here</span></>
-              :<>Already registered? <span style={{color:C.acc,cursor:"pointer"}} onClick={()=>{setMode("login");setErr("");}}>Sign in</span></>}
-          </div>
+
+          {mode==="verify"?(
+            <>
+              <div style={SS.secT}>Verify Your Number</div>
+              <div style={{fontSize:"12px",color:C.muted,marginBottom:"16px",lineHeight:"1.6"}}>
+                We sent a 6-digit code to <strong style={{color:C.sub}}>{pendingUser?.fmtPhone}</strong>. Enter it below to complete registration.
+              </div>
+              <div style={SS.ig}>
+                <label style={SS.lbl}>Verification Code *</label>
+                <input style={{...SS.inp,fontSize:"22px",letterSpacing:"8px",textAlign:"center"}} value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="000000" maxLength={6} onKeyDown={e=>e.key==="Enter"&&verify()}/>
+              </div>
+              {err&&<div style={SS.err}>{err}</div>}
+              <div style={{marginTop:"20px"}}><button style={SS.btnP(otp.length===6)} onClick={verify} disabled={loading}>{loading?"Verifying…":"Verify & Continue"}</button></div>
+              <div style={{marginTop:"12px",fontSize:"12px",color:C.muted,textAlign:"center"}}>
+                <span style={{color:C.acc,cursor:"pointer"}} onClick={async()=>{ setErr(""); const r=await apiPost('/api/send-otp',{phone:pendingUser.fmtPhone}); if(r.error) setErr(r.error); }}>Resend code</span>
+              </div>
+            </>
+          ):(
+            <>
+              <div style={SS.secT}>{mode==="login"?"Sign In":"Create Account"}</div>
+              {mode==="register"&&<div style={SS.ig}><label style={SS.lbl}>Full Name *</label><input style={SS.inp} value={name} onChange={e=>setName(e.target.value)} placeholder="Jane Smith"/></div>}
+              <div style={SS.ig}><label style={SS.lbl}>Email Address *</label><input style={SS.inp} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="jane@example.com"/></div>
+              <div style={SS.ig}><label style={SS.lbl}>Password *</label><input style={SS.inp} type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&submit()}/></div>
+              {mode==="register"&&<>
+                <div style={SS.ig}><label style={SS.lbl}>Confirm Password *</label><input style={SS.inp} type="password" value={pass2} onChange={e=>setPass2(e.target.value)} placeholder="••••••••"/></div>
+                <div style={SS.ig}><label style={SS.lbl}>Mobile Number * <span style={{textTransform:"none",letterSpacing:0,color:C.muted}}>(for appointment reminders)</span></label><input style={SS.inp} type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+44 7700 000000"/></div>
+              </>}
+              {err&&<div style={SS.err}>{err}</div>}
+              <div style={{marginTop:"20px"}}><button style={SS.btnP(true)} onClick={submit} disabled={loading}>{loading?"Please wait…":mode==="login"?"Sign In":"Create Account"}</button></div>
+              <div style={{marginTop:"16px",fontSize:"12px",color:C.muted,textAlign:"center"}}>
+                {mode==="login"
+                  ?<>No account? <span style={{color:C.acc,cursor:"pointer"}} onClick={()=>switchMode("register")}>Register here</span></>
+                  :<>Already registered? <span style={{color:C.acc,cursor:"pointer"}} onClick={()=>switchMode("login")}>Sign in</span></>}
+              </div>
+            </>
+          )}
         </div>
         <div style={{textAlign:"center",fontSize:"11px",color:"rgba(200,160,64,0.4)"}}>You must register to book an appointment</div>
       </div>
