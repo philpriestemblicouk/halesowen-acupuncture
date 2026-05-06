@@ -604,9 +604,16 @@ function AdminPanel({ onLogout }) {
   const [editErr,setEditErr]=useState(""); const [editOk,setEditOk]=useState("");
   const [pName,setPName]=useState(""); const [pEmail,setPEmail]=useState(""); const [pPhone,setPPhone]=useState(""); const [pHasInitial,setPHasInitial]=useState(false);
   const [patientErr,setPatientErr]=useState(""); const [patientOk,setPatientOk]=useState("");
+  const [schedEdits,setSchedEdits]=useState({}); const [schedSaving,setSchedSaving]=useState(null); const [schedSaveOk,setSchedSaveOk]=useState("");
 
   const loadAll=async()=>{ setLoading(true); setBookings(await getAllBookings()); setPatients(await getAllUsers()); setSchedule(await getSchedule()); setLoading(false); };
   useEffect(()=>{ loadAll(); },[]);
+  useEffect(()=>{
+    if(!schedule.length) return;
+    const init={};
+    for(let d=0;d<=6;d++){ const row=schedule.find(s=>s.day_of_week===d); init[d]={is_active:row?row.is_active:(d>=1&&d<=5),start_time:row?row.start_time:"09:00",end_time:row?row.end_time:"17:00"}; }
+    setSchedEdits(init);
+  },[schedule]);
 
   useEffect(()=>{
     if(!aDate||!aTreat||schedule.length===0) return;
@@ -665,6 +672,8 @@ function AdminPanel({ onLogout }) {
 
   const prevEditM=()=>{ if(editMonth===0){setEditMonth(11);setEditYear(y=>y-1);}else setEditMonth(m=>m-1); setEditDate(null);setEditTime(null); };
   const nextEditM=()=>{ if(editMonth===11){setEditMonth(0);setEditYear(y=>y+1);}else setEditMonth(m=>m+1); setEditDate(null);setEditTime(null); };
+
+  const saveSchedDay=async(dow)=>{ setSchedSaving(dow); setSchedSaveOk(""); const e=schedEdits[dow]; await saveScheduleDay(dow,e.start_time,e.end_time,e.is_active); setSchedSaving(null); setSchedSaveOk(`${DAY_NAMES[dow]} saved!`); setTimeout(()=>setSchedSaveOk(""),2500); loadAll(); };
 
   const openEdit=(booking)=>{ setSelBooking(booking); setEditMode(null); setEditErr(""); setEditOk(""); setEditDate(null); setEditTime(null); };
   const closeEdit=()=>{ setSelBooking(null); setEditMode(null); setEditErr(""); setEditOk(""); };
@@ -741,7 +750,7 @@ function AdminPanel({ onLogout }) {
 
 
         <div style={{display:"flex",gap:"8px",marginBottom:"20px",flexWrap:"wrap"}}>
-          {tabBtn("bookings","All Bookings")}{tabBtn("patients","Patients")}{tabBtn("add","+ Add Booking")}{tabBtn("schedule","📅 Schedule")}
+          {tabBtn("bookings","All Bookings")}{tabBtn("patients","Patients")}{tabBtn("add","+ Add Booking")}
         </div>
 
         {tab==="bookings"&&(
@@ -787,7 +796,7 @@ function AdminPanel({ onLogout }) {
               {selCalDate&&(
                 <div style={{borderTop:`1px solid rgba(200,160,64,0.15)`,paddingTop:"16px"}}>
                   <div style={{fontSize:"13px",color:"#f0ebe0",fontFamily:"Palatino,serif",marginBottom:"12px"}}>{MONTHS[calMonth]} {selCalDate}, {calYear}</div>
-                  {calSlots.length===0&&<div style={{fontSize:"12px",color:C.muted}}>No schedule set for this day — add working hours in the Schedule tab.</div>}
+                  {calSlots.length===0&&<div style={{fontSize:"12px",color:C.muted,marginBottom:"12px"}}>No schedule set for this day — set working hours below.</div>}
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px"}} className="time-grid">
                     {calSlots.map(({slot,booking,isStart})=>{
                       const isSel=selBooking&&booking&&selBooking.id===booking.id;
@@ -809,6 +818,30 @@ function AdminPanel({ onLogout }) {
                       );
                     })}
                   </div>
+
+                  {/* Inline schedule editor */}
+                  {(()=>{ const dow=new Date(calYear,calMonth,selCalDate).getDay(); const e=schedEdits[dow]||{is_active:false,start_time:"09:00",end_time:"17:00"}; const tOpts=[]; for(let m=6*60;m<=22*60;m+=30) tOpts.push(minsTo24(m)); return (
+                    <div style={{marginTop:"16px",paddingTop:"14px",borderTop:"1px solid rgba(200,160,64,0.08)"}}>
+                      <div style={{fontSize:"9px",letterSpacing:"2px",color:C.acc,textTransform:"uppercase",marginBottom:"10px"}}>Working Hours · {DAY_NAMES[dow]}s</div>
+                      <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
+                        <div style={{width:"36px",height:"20px",borderRadius:"10px",background:e.is_active?C.acc:"rgba(255,255,255,0.1)",cursor:"pointer",position:"relative"}} onClick={()=>setSchedEdits(prev=>({...prev,[dow]:{...prev[dow],is_active:!e.is_active}}))}>
+                          <div style={{position:"absolute",top:"2px",left:e.is_active?"18px":"2px",width:"16px",height:"16px",borderRadius:"50%",background:"white",transition:"left 0.2s"}}/>
+                        </div>
+                        <span style={{fontSize:"12px",color:e.is_active?"#f0ebe0":C.muted,minWidth:"44px"}}>{e.is_active?"Open":"Closed"}</span>
+                        {e.is_active&&<>
+                          <select style={{...SS.inp,width:"88px",padding:"6px 8px",appearance:"none"}} value={e.start_time} onChange={ev=>setSchedEdits(prev=>({...prev,[dow]:{...prev[dow],start_time:ev.target.value}}))}>
+                            {tOpts.map(t=><option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <span style={{color:C.muted,fontSize:"12px"}}>→</span>
+                          <select style={{...SS.inp,width:"88px",padding:"6px 8px",appearance:"none"}} value={e.end_time} onChange={ev=>setSchedEdits(prev=>({...prev,[dow]:{...prev[dow],end_time:ev.target.value}}))}>
+                            {tOpts.map(t=><option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </>}
+                        <button style={{...SS.btnP(true),padding:"6px 14px",fontSize:"11px"}} onClick={()=>saveSchedDay(dow)}>{schedSaving===dow?"Saving…":"Save Hours"}</button>
+                        {schedSaveOk&&<span style={{fontSize:"11px",color:"#6dd06d"}}>{schedSaveOk}</span>}
+                      </div>
+                    </div>
+                  ); })()}
 
                   {/* Booking action panel */}
                   {selBooking&&(
@@ -951,7 +984,7 @@ function AdminPanel({ onLogout }) {
                 ); })}
               </div>
             </div>
-            {aDate&&aSlots.length===0&&<div style={{fontSize:"12px",color:C.muted,marginBottom:"12px"}}>No slots for this day — check the Schedule tab.</div>}
+            {aDate&&aSlots.length===0&&<div style={{fontSize:"12px",color:C.muted,marginBottom:"12px"}}>No slots for this day — check working hours in the All Bookings calendar.</div>}
             {aDate&&aSlots.length>0&&<>
               <label style={SS.lbl}>Time * — {MONTHS[aMonth]} {aDate}</label>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"7px",marginBottom:"16px"}} className="time-grid">
@@ -967,13 +1000,6 @@ function AdminPanel({ onLogout }) {
             {addErr&&<div style={SS.err}>{addErr}</div>}
             {addOk&&<div style={{color:"#6dd06d",fontSize:"12px",marginBottom:"8px"}}>{addOk}</div>}
             <button style={SS.btnP(true)} onClick={addBooking}>Add Appointment</button>
-          </div>
-        )}
-
-        {tab==="schedule"&&(
-          <div style={SS.card}>
-            <div style={SS.secT}>Lucy's Working Hours</div>
-            <ScheduleTab/>
           </div>
         )}
 
