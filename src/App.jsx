@@ -357,6 +357,7 @@ function BookingFlow({ user, onLogout }) {
     const booking={ id, treatment:treatment.name, practitioner:"Lucy Priest", date:`${MONTHS[viewMonth]} ${selDate}, ${viewYear}`, time:selTime, deposit_paid:depositAmt, notes:form.notes, source:"patient", patient_name:user.name, patient_email:user.email };
     await insertBooking(booking);
     if(treatment.initialOnly) await updateUserInitial(user.email);
+    if(form.phone) apiPost('/api/confirm-booking',{ phone:form.phone, name:user.name, treatment:treatment.name, date:`${MONTHS[viewMonth]} ${selDate}, ${viewYear}`, time:selTime, ref:id, deposit:depositAmt });
     setBookingRef(id);
     setTimeout(()=>{ setProc(false); setConfirmed(true); },1500);
   };
@@ -695,6 +696,7 @@ function AdminPanel({ onLogout }) {
     const saveErr=await insertBooking(booking);
     if(saveErr){ setAddErr(`Failed to save: ${saveErr}`); return; }
     if(aTreat.initialOnly||aTreat.requiresInitial) await updateUserInitial(u.email);
+    if(u.phone) apiPost('/api/confirm-booking',{ phone:u.phone, name:u.name, treatment:aTreat.name, date:`${MONTHS[aMonth]} ${aDate}, ${aYear}`, time:aTime, ref:booking.id, deposit:0 });
     setAddOk(`✓ Booking ${booking.id} added for ${u.name}`);
     setADate(null); setATime(null); setANotes(""); setAEmail(""); setAName("");
     loadAll();
