@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase.js";
 import "./responsive.css";
 
-const ADMIN_EMAIL  = "admin@halesowenacupuncture.co.uk";
-const ADMIN_PASS   = "Halesowen2024!";
 const SLOT_INTERVAL = 30;
 
 const TREATMENTS = [
@@ -162,20 +160,23 @@ function AuthScreen({ onLogin }) {
   const submit = async () => {
     setErr(""); setLoading(true);
     if (!email||!pass){ setErr("Please fill in all fields."); setLoading(false); return; }
-    if (email.trim().toLowerCase()===ADMIN_EMAIL.toLowerCase()&&pass===ADMIN_PASS){ setLoading(false); onLogin({email:ADMIN_EMAIL,name:"Admin",isAdmin:true}); return; }
     if (mode==="register") {
       if (!name){ setErr("Please enter your name."); setLoading(false); return; }
       if (pass!==pass2){ setErr("Passwords do not match."); setLoading(false); return; }
       if (pass.length<6){ setErr("Password must be at least 6 characters."); setLoading(false); return; }
       const existing = await getUser(email);
       if (existing){ setErr("An account with this email already exists."); setLoading(false); return; }
-      const user = await createUser(email, name, btoa(pass));
+      const { error: authErr } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password: pass });
+      if (authErr){ setErr(authErr.message); setLoading(false); return; }
+      const user = await createUser(email, name, "");
       if (!user){ setErr("Registration failed. Please try again."); setLoading(false); return; }
       setLoading(false); onLogin({email:user.email,name:user.name,isAdmin:false});
     } else {
+      const { error: authErr } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass });
+      if (authErr){ setErr("Invalid email or password."); setLoading(false); return; }
       const user = await getUser(email);
-      if (!user||user.password_hash!==btoa(pass)){ setErr("Invalid email or password."); setLoading(false); return; }
-      setLoading(false); onLogin({email:user.email,name:user.name,isAdmin:false});
+      if (!user){ setErr("Account not found. Please register."); setLoading(false); return; }
+      setLoading(false); onLogin({email:user.email,name:user.name,isAdmin:user.is_admin||false});
     }
   };
   return (
@@ -879,9 +880,33 @@ function AdminPanel({ onLogout }) {
 }
 
 export default function App() {
-  const [user,setUser]=useState(()=>{ try{ const s=localStorage.getItem("ha_user"); return s?JSON.parse(s):null; }catch{ return null; } });
-  const login=(u)=>{ localStorage.setItem("ha_user",JSON.stringify(u)); setUser(u); };
-  const logout=()=>{ localStorage.removeItem("ha_user"); setUser(null); };
+  const [user,setUser]=useState(null);
+  const [authLoading,setAuthLoading]=useState(true);
+
+  useEffect(()=>{
+    supabase.auth.getSession().then(async({ data:{ session } })=>{
+      if(session){
+        const profile=await getUser(session.user.email);
+        if(profile) setUser({email:profile.email,name:profile.name,isAdmin:profile.is_admin||false});
+      }
+      setAuthLoading(false);
+    });
+    const { data:{ subscription } }=supabase.auth.onAuthStateChange(async(event,session)=>{
+      if(event==="SIGNED_OUT"||!session){ setUser(null); }
+    });
+    return ()=>subscription.unsubscribe();
+  },[]);
+
+  const login=(u)=>setUser(u);
+  const logout=async()=>{ await supabase.auth.signOut(); setUser(null); };
+
+  if(authLoading) return (
+    <div style={SS.app}><div style={SS.deco1}/><div style={SS.deco2}/>
+      <div style={{...SS.wrap,textAlign:"center",paddingTop:"80px"}} className="page-wrap">
+        <Logo/><div style={{color:C.muted,fontSize:"13px",letterSpacing:"2px",textTransform:"uppercase"}}>Loading…</div>
+      </div>
+    </div>
+  );
   if(!user) return <AuthScreen onLogin={login}/>;
   if(user.isAdmin) return <AdminPanel onLogout={logout}/>;
   return <BookingFlow user={user} onLogout={logout}/>;
