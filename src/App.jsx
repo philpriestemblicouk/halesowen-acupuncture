@@ -217,7 +217,7 @@ function AuthScreen({ onLogin }) {
   const submitLogin = async () => {
     const { error: authErr } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass });
     if (authErr) {
-      const profile = await getUser(email);
+      const { user: profile } = await apiPost('/api/get-profile', { email: email.trim().toLowerCase() });
       if (profile && profile.password_hash && profile.password_hash === btoa(pass)) {
         const { error: upErr } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password: pass });
         if (!upErr) {
@@ -230,7 +230,7 @@ function AuthScreen({ onLogin }) {
       }
       setErr("Invalid email or password."); return;
     }
-    const user = await getUser(email);
+    const { user } = await apiPost('/api/get-profile', { email: email.trim().toLowerCase() });
     if (!user) { setErr("Account not found. Please register."); return; }
     if (!user.is_admin && !user.phone_verified && user.phone) {
       const r = await apiPost('/api/send-otp', { phone: user.phone, email: user.email });
@@ -1020,7 +1020,7 @@ export default function App() {
   useEffect(()=>{
     supabase.auth.getSession().then(async({ data:{ session } })=>{
       if(session){
-        const profile=await getUser(session.user.email);
+        const { user: profile } = await apiPost('/api/get-profile', { email: session.user.email });
         if(profile){
           if(!profile.is_admin && !profile.phone_verified){
             await supabase.auth.signOut();
