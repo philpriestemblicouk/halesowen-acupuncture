@@ -117,41 +117,41 @@ function isManualEmail(email) {
 }
 
 const C = {
-  bg:"linear-gradient(135deg,#030d1f 0%,#050f22 40%,#040c1c 100%)",
-  acc:"#4da6ff", acc2:"#1a7fd4", acc3:"#2196f3", dark:"#010d1a",
-  card:"rgba(255,255,255,0.03)", bord:"rgba(77,166,255,0.15)", bord2:"rgba(77,166,255,0.25)",
-  muted:"#8fa0b8", text:"#e8e0d0", sub:"#c8c0b0",
+  bg:"linear-gradient(135deg,#0e0c09 0%,#120f0b 40%,#0b0906 100%)",
+  acc:"#c8a040", acc2:"#9a7828", acc3:"#3ab8c8", dark:"#080604",
+  card:"rgba(255,255,255,0.03)", bord:"rgba(200,160,64,0.18)", bord2:"rgba(200,160,64,0.32)",
+  muted:"#9a9080", text:"#f0ebe0", sub:"#d8d0c0",
 };
 const SS = {
   app:  { minHeight:"100vh", background:C.bg, fontFamily:"Georgia,serif", color:C.text, position:"relative", overflowX:"hidden" },
-  deco1:{ position:"fixed", top:"-20%", right:"-10%", width:"500px", height:"500px", borderRadius:"50%", background:"radial-gradient(circle,rgba(77,166,255,0.06) 0%,transparent 70%)", zIndex:0, pointerEvents:"none" },
-  deco2:{ position:"fixed", bottom:"-20%", left:"-10%", width:"600px", height:"600px", borderRadius:"50%", background:"radial-gradient(circle,rgba(0,100,200,0.07) 0%,transparent 70%)", zIndex:0, pointerEvents:"none" },
+  deco1:{ position:"fixed", top:"-20%", right:"-10%", width:"500px", height:"500px", borderRadius:"50%", background:"radial-gradient(circle,rgba(200,160,64,0.07) 0%,transparent 70%)", zIndex:0, pointerEvents:"none" },
+  deco2:{ position:"fixed", bottom:"-20%", left:"-10%", width:"600px", height:"600px", borderRadius:"50%", background:"radial-gradient(circle,rgba(58,184,200,0.07) 0%,transparent 70%)", zIndex:0, pointerEvents:"none" },
   wrap: { maxWidth:"720px", margin:"0 auto", padding:"40px 20px", position:"relative", zIndex:1, boxSizing:"border-box" },
   card: { background:C.card, border:`1px solid ${C.bord}`, borderRadius:"16px", padding:"28px", marginBottom:"20px", backdropFilter:"blur(10px)" },
   hdr:  { textAlign:"center", marginBottom:"36px" },
   logoW:{ display:"inline-flex", alignItems:"center", gap:"10px", marginBottom:"8px" },
-  logoI:{ width:"36px", height:"36px", background:`linear-gradient(135deg,${C.acc},${C.acc2})`, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px" },
+  logoI:{ width:"72px", height:"72px", borderRadius:"50%", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" },
   logoT:{ fontSize:"12px", letterSpacing:"4px", textTransform:"uppercase", color:C.acc },
   title:{ fontSize:"clamp(24px,5vw,38px)", fontWeight:"normal", margin:"8px 0 4px", color:"#f0ebe0", fontFamily:"Palatino,serif" },
-  sub:  { fontSize:"13px", color:"#7ab8d4", letterSpacing:"2px", textTransform:"uppercase", margin:0 },
+  sub:  { fontSize:"13px", color:"#c8a868", letterSpacing:"2px", textTransform:"uppercase", margin:0 },
   secT: { fontSize:"10px", letterSpacing:"3px", textTransform:"uppercase", color:C.acc, marginBottom:"20px" },
-  inp:  { width:"100%", padding:"11px 13px", background:"rgba(255,255,255,0.04)", border:`1px solid rgba(77,166,255,0.2)`, borderRadius:"8px", color:C.text, fontSize:"13px", outline:"none", boxSizing:"border-box", fontFamily:"Georgia,serif" },
+  inp:  { width:"100%", padding:"11px 13px", background:"rgba(255,255,255,0.04)", border:`1px solid rgba(200,160,64,0.2)`, borderRadius:"8px", color:C.text, fontSize:"13px", outline:"none", boxSizing:"border-box", fontFamily:"Georgia,serif" },
   lbl:  { display:"block", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", color:C.acc, marginBottom:"7px" },
   ig:   { marginBottom:"16px" },
   r2:   { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px" },
-  btnP: (on) => ({ padding:"12px 28px", background:on?`linear-gradient(135deg,${C.acc},${C.acc3})`:"rgba(255,255,255,0.05)", border:"none", borderRadius:"8px", color:on?C.dark:"rgba(255,255,255,0.2)", cursor:on?"pointer":"not-allowed", fontSize:"12px", letterSpacing:"1px", fontWeight:"bold", fontFamily:"Georgia,serif" }),
-  btnS: { padding:"11px 22px", background:"transparent", border:`1px solid rgba(77,166,255,0.3)`, borderRadius:"8px", color:C.acc, cursor:"pointer", fontSize:"12px", letterSpacing:"1px", fontFamily:"Georgia,serif" },
-  sumB: { background:"rgba(77,166,255,0.06)", borderRadius:"10px", padding:"16px", marginBottom:"16px" },
+  btnP: (on) => ({ padding:"12px 28px", background:on?`linear-gradient(135deg,${C.acc},${C.acc2})`:"rgba(255,255,255,0.05)", border:"none", borderRadius:"8px", color:on?"#0e0c09":"rgba(255,255,255,0.2)", cursor:on?"pointer":"not-allowed", fontSize:"12px", letterSpacing:"1px", fontWeight:"bold", fontFamily:"Georgia,serif" }),
+  btnS: { padding:"11px 22px", background:"transparent", border:`1px solid rgba(200,160,64,0.35)`, borderRadius:"8px", color:C.acc, cursor:"pointer", fontSize:"12px", letterSpacing:"1px", fontFamily:"Georgia,serif" },
+  sumB: { background:"rgba(200,160,64,0.06)", borderRadius:"10px", padding:"16px", marginBottom:"16px" },
   sumR: (last) => ({ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom:last?"none":"1px solid rgba(255,255,255,0.06)", fontSize:"12px" }),
   sumL: { color:C.muted }, sumV: { color:C.text },
   err:  { color:"#ff6b6b", fontSize:"12px", marginTop:"8px", textAlign:"center" },
-  badge:(ok) => ({ display:"inline-flex", alignItems:"center", gap:"5px", padding:"4px 10px", borderRadius:"20px", fontSize:"11px", background:ok?"rgba(77,166,255,0.12)":"rgba(255,100,100,0.1)", color:ok?C.acc:"#ff8888", border:`1px solid ${ok?"rgba(77,166,255,0.3)":"rgba(255,100,100,0.3)"}` }),
+  badge:(ok) => ({ display:"inline-flex", alignItems:"center", gap:"5px", padding:"4px 10px", borderRadius:"20px", fontSize:"11px", background:ok?"rgba(200,160,64,0.12)":"rgba(255,100,100,0.1)", color:ok?C.acc:"#ff8888", border:`1px solid ${ok?"rgba(200,160,64,0.35)":"rgba(255,100,100,0.3)"}` }),
 };
 
 function Logo() {
   return (
     <div style={SS.hdr}>
-      <div style={SS.logoW}><div style={SS.logoI}>✦</div><span style={SS.logoT}>Halesowen Acupuncture</span></div>
+      <img src="/icon-192.png" alt="Halesowen Acupuncture" style={{width:"100px",height:"100px",borderRadius:"50%",display:"block",margin:"0 auto 12px",boxShadow:"0 0 32px rgba(200,160,64,0.2)"}}/>
     </div>
   );
 }
@@ -197,7 +197,7 @@ function AuthScreen({ onLogin }) {
               :<>Already registered? <span style={{color:C.acc,cursor:"pointer"}} onClick={()=>{setMode("login");setErr("");}}>Sign in</span></>}
           </div>
         </div>
-        <div style={{textAlign:"center",fontSize:"11px",color:"rgba(77,166,255,0.4)"}}>You must register to book an appointment</div>
+        <div style={{textAlign:"center",fontSize:"11px",color:"rgba(200,160,64,0.4)"}}>You must register to book an appointment</div>
       </div>
     </div>
   );
@@ -269,7 +269,7 @@ function BookingFlow({ user, onLogout }) {
                 <div key={l} style={SS.sumR(i===a.length-1)}><span style={SS.sumL}>{l}</span><span style={{...SS.sumV,color:l==="Deposit Paid"?C.acc:C.text}}>{v}</span></div>
               ))}
             </div>
-            <div style={{display:"inline-block",padding:"8px 20px",background:"rgba(77,166,255,0.1)",border:"1px solid rgba(77,166,255,0.3)",borderRadius:"8px",fontSize:"12px",color:C.acc,letterSpacing:"3px",marginBottom:"24px"}}>{bookingRef}</div>
+            <div style={{display:"inline-block",padding:"8px 20px",background:"rgba(200,160,64,0.1)",border:"1px solid rgba(200,160,64,0.35)",borderRadius:"8px",fontSize:"12px",color:C.acc,letterSpacing:"3px",marginBottom:"24px"}}>{bookingRef}</div>
             <div style={{display:"flex",gap:"10px",justifyContent:"center"}}>
               <button style={SS.btnP(true)} onClick={()=>{setConfirmed(false);setStep(1);setTreatment(null);setSelDate(null);setSelTime(null);}}>Book Another</button>
               <button style={SS.btnS} onClick={onLogout}>Sign Out</button>
@@ -294,11 +294,11 @@ function BookingFlow({ user, onLogout }) {
         <h2 style={{...SS.title,textAlign:"center",marginBottom:"4px"}}>Book Your Session</h2>
         <p style={{...SS.sub,textAlign:"center",marginBottom:"24px"}}>Traditional Acupuncture · Halesowen</p>
         <div style={{display:"flex",justifyContent:"center",marginBottom:"28px",position:"relative"}} className="steps-bar">
-          <div style={{position:"absolute",top:"13px",left:"calc(10% + 13px)",right:"calc(10% + 13px)",height:"1px",background:"rgba(77,166,255,0.2)",zIndex:0}}/>
+          <div style={{position:"absolute",top:"13px",left:"calc(10% + 13px)",right:"calc(10% + 13px)",height:"1px",background:"rgba(200,160,64,0.2)",zIndex:0}}/>
           {STEP_LABELS.map((label,i)=>{ const n=i+1; const a=step===n; const d=step>n; return (
             <div key={n} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"5px",flex:1,position:"relative",zIndex:1,cursor:d?"pointer":"default"}} onClick={()=>d&&setStep(n)}>
-              <div style={{width:"26px",height:"26px",borderRadius:"50%",background:d?C.acc:"transparent",border:d?"none":a?`2px solid ${C.acc}`:`1px solid rgba(77,166,255,0.3)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"10px",color:d?C.dark:a?C.acc:"rgba(77,166,255,0.4)",fontWeight:"bold"}}>{d?"✓":n}</div>
-              <span style={{fontSize:"9px",letterSpacing:"1.5px",textTransform:"uppercase",color:d||a?C.acc:"rgba(77,166,255,0.3)"}}>{label}</span>
+              <div style={{width:"26px",height:"26px",borderRadius:"50%",background:d?C.acc:"transparent",border:d?"none":a?`2px solid ${C.acc}`:`1px solid rgba(200,160,64,0.35)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"10px",color:d?C.dark:a?C.acc:"rgba(200,160,64,0.4)",fontWeight:"bold"}}>{d?"✓":n}</div>
+              <span style={{fontSize:"9px",letterSpacing:"1.5px",textTransform:"uppercase",color:d||a?C.acc:"rgba(200,160,64,0.35)"}}>{label}</span>
             </div>
           ); })}
         </div>
@@ -306,15 +306,15 @@ function BookingFlow({ user, onLogout }) {
         {step===1&&(
           <div style={SS.card}>
             <div style={SS.secT}>Select a Treatment</div>
-            {!hasInitial&&<div style={{background:"rgba(77,166,255,0.06)",border:"1px solid rgba(77,166,255,0.15)",borderRadius:"10px",padding:"12px 16px",marginBottom:"16px",fontSize:"12px",color:C.muted}}>ℹ️ As a new patient, please book the <strong style={{color:C.acc}}>Initial Consultation</strong> first. Other treatments unlock after your first visit.</div>}
+            {!hasInitial&&<div style={{background:"rgba(200,160,64,0.06)",border:"1px solid rgba(200,160,64,0.15)",borderRadius:"10px",padding:"12px 16px",marginBottom:"16px",fontSize:"12px",color:C.muted}}>ℹ️ As a new patient, please book the <strong style={{color:C.acc}}>Initial Consultation</strong> first. Other treatments unlock after your first visit.</div>}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}} className="treatment-grid">
               {TREATMENTS.map(t=>{ const locked=t.requiresInitial&&!hasInitial; const sel=treatment?.id===t.id; return (
-                <div key={t.id} style={{padding:"16px",borderRadius:"12px",border:sel?`1px solid ${C.acc}`:"1px solid rgba(255,255,255,0.08)",background:sel?"rgba(77,166,255,0.08)":locked?"rgba(255,255,255,0.01)":"rgba(255,255,255,0.02)",cursor:locked?"not-allowed":"pointer",opacity:locked?0.45:1,position:"relative"}} onClick={()=>!locked&&setTreatment(t)}>
+                <div key={t.id} style={{padding:"16px",borderRadius:"12px",border:sel?`1px solid ${C.acc}`:"1px solid rgba(255,255,255,0.08)",background:sel?"rgba(200,160,64,0.08)":locked?"rgba(255,255,255,0.01)":"rgba(255,255,255,0.02)",cursor:locked?"not-allowed":"pointer",opacity:locked?0.45:1,position:"relative"}} onClick={()=>!locked&&setTreatment(t)}>
                   {locked&&<div style={{position:"absolute",top:"10px",right:"10px",fontSize:"12px"}}>🔒</div>}
                   <div style={{fontSize:"14px",marginBottom:"3px",color:"#f0ebe0",fontFamily:"Palatino,serif"}}>{t.name}</div>
                   <div style={{fontSize:"11px",color:C.muted,marginBottom:"8px",lineHeight:"1.5"}}>{t.description}</div>
                   <div style={{display:"flex",gap:"10px",fontSize:"11px",color:C.acc}}><span>⏱ {t.displayDuration}</span><span>£{t.price}</span></div>
-                  {locked&&<div style={{fontSize:"10px",color:"rgba(77,166,255,0.5)",marginTop:"4px"}}>Unlocks after initial consultation</div>}
+                  {locked&&<div style={{fontSize:"10px",color:"rgba(200,160,64,0.5)",marginTop:"4px"}}>Unlocks after initial consultation</div>}
                 </div>
               ); })}
             </div>
@@ -325,15 +325,15 @@ function BookingFlow({ user, onLogout }) {
           <div style={SS.card}>
             <div style={SS.secT}>Pick a Date & Time</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px"}}>
-              <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"30px",height:"30px",borderRadius:"7px",cursor:"pointer",fontSize:"16px"}} onClick={prevMonth}>‹</button>
+              <button style={{background:"none",border:`1px solid rgba(200,160,64,0.35)`,color:C.acc,width:"30px",height:"30px",borderRadius:"7px",cursor:"pointer",fontSize:"16px"}} onClick={prevMonth}>‹</button>
               <span style={{fontSize:"15px",color:"#f0ebe0",fontFamily:"Palatino,serif"}}>{MONTHS[viewMonth]} {viewYear}</span>
-              <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"30px",height:"30px",borderRadius:"7px",cursor:"pointer",fontSize:"16px"}} onClick={nextMonth}>›</button>
+              <button style={{background:"none",border:`1px solid rgba(200,160,64,0.35)`,color:C.acc,width:"30px",height:"30px",borderRadius:"7px",cursor:"pointer",fontSize:"16px"}} onClick={nextMonth}>›</button>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"3px",marginBottom:"16px"}}>
               {DAY_SHORT.map(d=><div key={d} style={{textAlign:"center",fontSize:"9px",color:C.muted,padding:"3px 0",marginBottom:"2px"}}>{d}</div>)}
               {Array.from({length:getFirstDay(viewYear,viewMonth)}).map((_,i)=><div key={"e"+i}/>)}
               {Array.from({length:getDaysInMonth(viewYear,viewMonth)}).map((_,i)=>{ const d=i+1; const dis=isPast(d)||isUnavail(d); const sel=selDate===d&&!dis; const tod=isToday(d); return (
-                <div key={d} style={{aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:"7px",fontSize:"12px",cursor:dis?"not-allowed":"pointer",background:sel?C.acc:tod?"rgba(77,166,255,0.12)":"transparent",color:sel?C.dark:dis?"rgba(255,255,255,0.15)":tod?C.acc:"#c8c0b0",border:tod&&!sel?`1px solid rgba(77,166,255,0.4)`:"1px solid transparent",fontWeight:sel||tod?"bold":"normal"}} onClick={()=>{ if(!dis){setSelDate(d);setSelTime(null);} }}>{d}</div>
+                <div key={d} style={{aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:"7px",fontSize:"12px",cursor:dis?"not-allowed":"pointer",background:sel?C.acc:tod?"rgba(200,160,64,0.12)":"transparent",color:sel?C.dark:dis?"rgba(255,255,255,0.15)":tod?C.acc:"#c8c0b0",border:tod&&!sel?`1px solid rgba(200,160,64,0.4)`:"1px solid transparent",fontWeight:sel||tod?"bold":"normal"}} onClick={()=>{ if(!dis){setSelDate(d);setSelTime(null);} }}>{d}</div>
               ); })}
             </div>
             {selDate&&slots.length===0&&<div style={{fontSize:"12px",color:C.muted,textAlign:"center",padding:"12px"}}>No availability on this day.</div>}
@@ -378,16 +378,16 @@ function BookingFlow({ user, onLogout }) {
             </div>
             {depositAmt>0?(
               <>
-                <div style={{background:`linear-gradient(135deg,rgba(77,166,255,0.08),rgba(33,150,243,0.05))`,border:`1px solid ${C.bord2}`,borderRadius:"12px",padding:"16px 18px",marginBottom:"16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{background:`linear-gradient(135deg,rgba(200,160,64,0.08),rgba(58,184,200,0.05))`,border:`1px solid ${C.bord2}`,borderRadius:"12px",padding:"16px 18px",marginBottom:"16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                   <div>
                     <div style={{fontSize:"11px",color:C.muted,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"3px"}}>Booking Deposit</div>
                     <div style={{fontSize:"26px",color:C.acc,fontFamily:"Palatino,serif"}}>£{depositAmt}</div>
                     <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>Balance of £{treatment?.price-depositAmt} due at appointment</div>
                   </div>
-                  <div style={{width:"48px",height:"48px",borderRadius:"10px",background:"rgba(77,166,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px"}}>💳</div>
+                  <div style={{width:"48px",height:"48px",borderRadius:"10px",background:"rgba(200,160,64,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px"}}>💳</div>
                 </div>
                 <div style={{background:"rgba(255,160,50,0.06)",border:"1px solid rgba(255,160,50,0.2)",borderRadius:"8px",padding:"10px 14px",marginBottom:"16px",fontSize:"11px",color:"#c8a060"}}>⚠ This deposit is non-refundable if you cancel within 48 hours of your appointment.</div>
-                <div style={{background:"linear-gradient(135deg,#0d1e38,#061428)",border:`1px solid rgba(77,166,255,0.2)`,borderRadius:"14px",padding:"18px",marginBottom:"16px"}}>
+                <div style={{background:"linear-gradient(135deg,#1a150a,#100c05)",border:`1px solid rgba(200,160,64,0.2)`,borderRadius:"14px",padding:"18px",marginBottom:"16px"}}>
                   <div style={{width:"30px",height:"22px",background:"linear-gradient(135deg,#d4af37,#b8962e)",borderRadius:"4px",marginBottom:"12px"}}/>
                   <div style={{fontSize:"14px",letterSpacing:"3px",color:C.text,marginBottom:"12px",fontFamily:"monospace"}}>{card.number||"•••• •••• •••• ••••"}</div>
                   <div style={{display:"flex",justifyContent:"space-between"}}>
@@ -404,7 +404,7 @@ function BookingFlow({ user, onLogout }) {
                 <div style={{display:"flex",alignItems:"center",gap:"6px",fontSize:"11px",color:C.muted,marginTop:"12px"}}>🔒 Payment is encrypted & secure.</div>
               </>
             ):(
-              <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(77,166,255,0.15)",borderRadius:"8px",padding:"12px 16px",fontSize:"12px",color:C.muted}}>No deposit required — full payment of £{treatment?.price} is due at the appointment.</div>
+              <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(200,160,64,0.15)",borderRadius:"8px",padding:"12px 16px",fontSize:"12px",color:C.muted}}>No deposit required — full payment of £{treatment?.price} is due at the appointment.</div>
             )}
           </div>
         )}
@@ -439,7 +439,7 @@ function ScheduleTab() {
       <div style={{fontSize:"12px",color:C.muted,marginBottom:"20px",lineHeight:"1.6"}}>Set Lucy's working hours. Patients only see slots within these hours. Toggle a day off to mark it as closed.</div>
       {saveOk&&<div style={{color:"#6dd06d",fontSize:"12px",marginBottom:"16px",textAlign:"center"}}>{saveOk}</div>}
       {[1,2,3,4,5,6,0].map(day=>{ const e=edits[day]||{is_active:false,start_time:"09:00",end_time:"17:00"}; const preview=previewSlots(day); return (
-        <div key={day} style={{padding:"16px",borderRadius:"12px",border:`1px solid ${e.is_active?"rgba(77,166,255,0.2)":"rgba(255,255,255,0.06)"}`,background:e.is_active?"rgba(77,166,255,0.04)":"rgba(255,255,255,0.01)",marginBottom:"10px"}}>
+        <div key={day} style={{padding:"16px",borderRadius:"12px",border:`1px solid ${e.is_active?"rgba(200,160,64,0.2)":"rgba(255,255,255,0.06)"}`,background:e.is_active?"rgba(77,166,255,0.04)":"rgba(255,255,255,0.01)",marginBottom:"10px"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"12px"}}>
             <div style={{display:"flex",alignItems:"center",gap:"12px",minWidth:"120px"}}>
               <div style={{width:"42px",height:"22px",borderRadius:"11px",background:e.is_active?C.acc:"rgba(255,255,255,0.1)",cursor:"pointer",position:"relative"}} onClick={()=>update(day,"is_active",!e.is_active)}>
@@ -463,10 +463,10 @@ function ScheduleTab() {
             ):<div style={{fontSize:"12px",color:"rgba(255,255,255,0.2)"}}>Closed</div>}
           </div>
           {e.is_active&&preview.length>0&&(
-            <div style={{marginTop:"12px",paddingTop:"12px",borderTop:"1px solid rgba(77,166,255,0.1)"}}>
+            <div style={{marginTop:"12px",paddingTop:"12px",borderTop:"1px solid rgba(200,160,64,0.1)"}}>
               <div style={{fontSize:"9px",color:C.muted,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"8px"}}>{preview.length} slots · {e.start_time} – {e.end_time}</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:"4px"}}>
-                {preview.map(t=><div key={t} style={{padding:"3px 8px",borderRadius:"4px",fontSize:"10px",background:"rgba(77,166,255,0.08)",border:"1px solid rgba(77,166,255,0.15)",color:C.muted}}>{t}</div>)}
+                {preview.map(t=><div key={t} style={{padding:"3px 8px",borderRadius:"4px",fontSize:"10px",background:"rgba(200,160,64,0.08)",border:"1px solid rgba(200,160,64,0.15)",color:C.muted}}>{t}</div>)}
               </div>
             </div>
           )}
@@ -616,7 +616,7 @@ function AdminPanel({ onLogout }) {
   };
 
   const tabBtn=(id,label)=>(
-    <button onClick={()=>setTab(id)} style={{padding:"9px 20px",background:tab===id?"rgba(77,166,255,0.15)":"transparent",border:`1px solid ${tab===id?C.acc:"rgba(77,166,255,0.2)"}`,borderRadius:"8px",color:tab===id?C.acc:C.muted,cursor:"pointer",fontSize:"12px",letterSpacing:"1px",fontFamily:"Georgia,serif"}}>{label}</button>
+    <button onClick={()=>setTab(id)} style={{padding:"9px 20px",background:tab===id?"rgba(200,160,64,0.15)":"transparent",border:`1px solid ${tab===id?C.acc:"rgba(200,160,64,0.2)"}`,borderRadius:"8px",color:tab===id?C.acc:C.muted,cursor:"pointer",fontSize:"12px",letterSpacing:"1px",fontFamily:"Georgia,serif"}}>{label}</button>
   );
 
   return (
@@ -624,7 +624,7 @@ function AdminPanel({ onLogout }) {
       <div style={{...SS.wrap,maxWidth:"900px"}} className="page-wrap">
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"28px"}} className="admin-header">
           <div>
-            <div style={{display:"inline-flex",alignItems:"center",gap:"10px"}}><div style={SS.logoI}>✦</div><span style={SS.logoT}>Halesowen Acupuncture</span></div>
+            <div style={{display:"inline-flex",alignItems:"center",gap:"12px"}}><img src="/icon-192.png" alt="" style={{width:"40px",height:"40px",borderRadius:"50%"}}/><span style={SS.logoT}>Halesowen Acupuncture</span></div>
             <div style={{fontSize:"11px",color:C.muted,marginTop:"4px",letterSpacing:"2px",textTransform:"uppercase"}}>Admin Dashboard</div>
           </div>
           <button style={SS.btnS} onClick={onLogout}>Sign Out</button>
@@ -654,9 +654,9 @@ function AdminPanel({ onLogout }) {
             {!loading&&(<>
               {/* Month navigator */}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}}>
-                <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"30px",height:"30px",borderRadius:"7px",cursor:"pointer",fontSize:"16px"}} onClick={prevCalM}>‹</button>
+                <button style={{background:"none",border:`1px solid rgba(200,160,64,0.35)`,color:C.acc,width:"30px",height:"30px",borderRadius:"7px",cursor:"pointer",fontSize:"16px"}} onClick={prevCalM}>‹</button>
                 <span style={{fontSize:"15px",color:"#f0ebe0",fontFamily:"Palatino,serif"}}>{MONTHS[calMonth]} {calYear}</span>
-                <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"30px",height:"30px",borderRadius:"7px",cursor:"pointer",fontSize:"16px"}} onClick={nextCalM}>›</button>
+                <button style={{background:"none",border:`1px solid rgba(200,160,64,0.35)`,color:C.acc,width:"30px",height:"30px",borderRadius:"7px",cursor:"pointer",fontSize:"16px"}} onClick={nextCalM}>›</button>
               </div>
               {/* Calendar grid */}
               <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"3px",marginBottom:"16px"}}>
@@ -670,7 +670,7 @@ function AdminPanel({ onLogout }) {
                   const dow=new Date(calYear,calMonth,d).getDay();
                   const hasSched=schedule.find(s=>s.day_of_week===dow&&s.is_active);
                   return (
-                    <div key={d} onClick={()=>setSelCalDate(isSel?null:d)} style={{aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:"7px",cursor:"pointer",background:isSel?C.acc:"transparent",border:isToday&&!isSel?`1px solid rgba(77,166,255,0.4)`:"1px solid transparent",color:isSel?C.dark:hasSched?"#c8c0b0":"rgba(255,255,255,0.2)"}}>
+                    <div key={d} onClick={()=>setSelCalDate(isSel?null:d)} style={{aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:"7px",cursor:"pointer",background:isSel?C.acc:"transparent",border:isToday&&!isSel?`1px solid rgba(200,160,64,0.4)`:"1px solid transparent",color:isSel?C.dark:hasSched?"#c8c0b0":"rgba(255,255,255,0.2)"}}>
                       <span style={{fontSize:"12px",fontWeight:isSel||isToday?"bold":"normal"}}>{d}</span>
                       {dayBks.length>0&&<div style={{width:"6px",height:"6px",borderRadius:"50%",background:isSel?"white":"#ff6b6b",marginTop:"1px"}}/>}
                     </div>
@@ -685,7 +685,7 @@ function AdminPanel({ onLogout }) {
               </div>
               {/* Day slot view */}
               {selCalDate&&(
-                <div style={{borderTop:`1px solid rgba(77,166,255,0.15)`,paddingTop:"16px"}}>
+                <div style={{borderTop:`1px solid rgba(200,160,64,0.15)`,paddingTop:"16px"}}>
                   <div style={{fontSize:"13px",color:"#f0ebe0",fontFamily:"Palatino,serif",marginBottom:"12px"}}>{MONTHS[calMonth]} {selCalDate}, {calYear}</div>
                   {calSlots.length===0&&<div style={{fontSize:"12px",color:C.muted}}>No schedule set for this day — add working hours in the Schedule tab.</div>}
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px"}} className="time-grid">
@@ -712,7 +712,7 @@ function AdminPanel({ onLogout }) {
 
                   {/* Booking action panel */}
                   {selBooking&&(
-                    <div style={{marginTop:"16px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(77,166,255,0.2)",borderRadius:"12px",padding:"16px"}}>
+                    <div style={{marginTop:"16px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(200,160,64,0.2)",borderRadius:"12px",padding:"16px"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"12px"}}>
                         <div>
                           <div style={{fontSize:"13px",color:"#f0ebe0",fontWeight:"500",marginBottom:"3px"}}>{selBooking.patient_name||selBooking.patient_email}</div>
@@ -723,7 +723,7 @@ function AdminPanel({ onLogout }) {
                         <button onClick={closeEdit} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:"18px",lineHeight:1,padding:"0 4px"}}>×</button>
                       </div>
                       <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
-                        <button onClick={()=>setEditMode(editMode==="reschedule"?null:"reschedule")} style={{padding:"8px 16px",background:editMode==="reschedule"?"rgba(77,166,255,0.2)":"transparent",border:`1px solid ${C.acc}`,borderRadius:"7px",color:C.acc,cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>
+                        <button onClick={()=>setEditMode(editMode==="reschedule"?null:"reschedule")} style={{padding:"8px 16px",background:editMode==="reschedule"?"rgba(200,160,64,0.2)":"transparent",border:`1px solid ${C.acc}`,borderRadius:"7px",color:C.acc,cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>
                           {editMode==="reschedule"?"▲ Cancel Move":"↕ Reschedule"}
                         </button>
                         <button onClick={handleDeleteBooking} style={{padding:"8px 16px",background:"transparent",border:"1px solid rgba(255,100,100,0.4)",borderRadius:"7px",color:"#ff8888",cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>
@@ -732,13 +732,13 @@ function AdminPanel({ onLogout }) {
                       </div>
 
                       {editMode==="reschedule"&&(
-                        <div style={{marginTop:"14px",paddingTop:"14px",borderTop:"1px solid rgba(77,166,255,0.1)"}}>
+                        <div style={{marginTop:"14px",paddingTop:"14px",borderTop:"1px solid rgba(200,160,64,0.1)"}}>
                           <div style={{fontSize:"10px",letterSpacing:"2px",color:C.acc,marginBottom:"10px",textTransform:"uppercase"}}>Choose new date & time</div>
-                          <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(77,166,255,0.15)",borderRadius:"10px",padding:"12px",marginBottom:"12px"}}>
+                          <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(200,160,64,0.15)",borderRadius:"10px",padding:"12px",marginBottom:"12px"}}>
                             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"10px"}}>
-                              <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"26px",height:"26px",borderRadius:"6px",cursor:"pointer"}} onClick={prevEditM}>‹</button>
+                              <button style={{background:"none",border:`1px solid rgba(200,160,64,0.35)`,color:C.acc,width:"26px",height:"26px",borderRadius:"6px",cursor:"pointer"}} onClick={prevEditM}>‹</button>
                               <span style={{fontSize:"13px",color:"#f0ebe0"}}>{MONTHS[editMonth]} {editYear}</span>
-                              <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"26px",height:"26px",borderRadius:"6px",cursor:"pointer"}} onClick={nextEditM}>›</button>
+                              <button style={{background:"none",border:`1px solid rgba(200,160,64,0.35)`,color:C.acc,width:"26px",height:"26px",borderRadius:"6px",cursor:"pointer"}} onClick={nextEditM}>›</button>
                             </div>
                             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"2px"}}>
                               {DAY_SHORT.map(d=><div key={d} style={{textAlign:"center",fontSize:"9px",color:C.muted,padding:"2px 0"}}>{d}</div>)}
@@ -782,7 +782,7 @@ function AdminPanel({ onLogout }) {
               </button>
             </div>
             {showAddPatient&&(
-              <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(77,166,255,0.2)",borderRadius:"12px",padding:"18px",marginBottom:"20px"}}>
+              <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(200,160,64,0.2)",borderRadius:"12px",padding:"18px",marginBottom:"20px"}}>
                 <div style={{fontSize:"10px",letterSpacing:"2px",textTransform:"uppercase",color:C.acc,marginBottom:"14px"}}>New Patient</div>
                 <div style={SS.ig}><label style={SS.lbl}>Full Name *</label><input style={SS.inp} value={pName} onChange={e=>setPName(e.target.value)} placeholder="Jane Smith"/></div>
                 <div style={SS.r2} className="r2">
@@ -790,7 +790,7 @@ function AdminPanel({ onLogout }) {
                   <div style={SS.ig}><label style={SS.lbl}>Phone (optional)</label><input style={SS.inp} value={pPhone} onChange={e=>setPPhone(e.target.value)} placeholder="+44 7700 000000"/></div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px",cursor:"pointer"}} onClick={()=>setPHasInitial(v=>!v)}>
-                  <div style={{width:"18px",height:"18px",borderRadius:"4px",border:`1px solid ${pHasInitial?C.acc:"rgba(77,166,255,0.3)"}`,background:pHasInitial?"rgba(77,166,255,0.2)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",color:C.acc}}>{pHasInitial?"✓":""}</div>
+                  <div style={{width:"18px",height:"18px",borderRadius:"4px",border:`1px solid ${pHasInitial?C.acc:"rgba(200,160,64,0.35)"}`,background:pHasInitial?"rgba(200,160,64,0.2)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",color:C.acc}}>{pHasInitial?"✓":""}</div>
                   <span style={{fontSize:"12px",color:C.muted}}>Initial consultation already completed</span>
                 </div>
                 {patientErr&&<div style={SS.err}>{patientErr}</div>}
@@ -805,7 +805,7 @@ function AdminPanel({ onLogout }) {
               const displayName=noEmail?p.name.split(" — ")[0]:p.name;
               const displayPhone=noEmail&&p.name.includes(" — ")?p.name.split(" — ")[1]:null;
               return (
-                <div key={p.id||p.email} style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(77,166,255,0.1)",marginBottom:"8px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}} className="patient-row">
+                <div key={p.id||p.email} style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(200,160,64,0.1)",marginBottom:"8px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}} className="patient-row">
                   <div>
                     <div style={{fontSize:"13px",color:"#f0ebe0",marginBottom:"2px"}}>{displayName}</div>
                     <div style={{fontSize:"12px",color:C.muted}}>{noEmail?"No email"+(displayPhone?" · "+displayPhone:""):p.email}</div>
@@ -824,9 +824,9 @@ function AdminPanel({ onLogout }) {
           <div style={SS.card}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px"}}>
               <div style={{...SS.secT,margin:0}}>Add Appointment Manually</div>
-              <div style={{padding:"4px 10px",background:"rgba(77,166,255,0.1)",border:"1px solid rgba(77,166,255,0.3)",borderRadius:"6px",fontSize:"10px",color:C.acc,letterSpacing:"1px"}}>Admin Override Active</div>
+              <div style={{padding:"4px 10px",background:"rgba(200,160,64,0.1)",border:"1px solid rgba(200,160,64,0.35)",borderRadius:"6px",fontSize:"10px",color:C.acc,letterSpacing:"1px"}}>Admin Override Active</div>
             </div>
-            <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(77,166,255,0.15)",borderRadius:"8px",padding:"10px 14px",marginBottom:"16px",fontSize:"11px",color:C.muted}}>All treatments are available regardless of patient history. Email is optional for walk-in or phone patients.</div>
+            <div style={{background:"rgba(77,166,255,0.05)",border:"1px solid rgba(200,160,64,0.15)",borderRadius:"8px",padding:"10px 14px",marginBottom:"16px",fontSize:"11px",color:C.muted}}>All treatments are available regardless of patient history. Email is optional for walk-in or phone patients.</div>
             <div style={SS.r2} className="r2">
               <div style={SS.ig}><label style={SS.lbl}>Patient Name *</label><input style={SS.inp} value={aName} onChange={e=>setAName(e.target.value)} placeholder="Jane Smith"/></div>
               <div style={SS.ig}><label style={SS.lbl}>Email (optional)</label><input style={SS.inp} value={aEmail} onChange={e=>setAEmail(e.target.value)} placeholder="jane@example.com"/></div>
@@ -839,9 +839,9 @@ function AdminPanel({ onLogout }) {
             <label style={SS.lbl}>Date *</label>
             <div style={{...SS.card,padding:"16px",marginBottom:"16px"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}}>
-                <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"28px",height:"28px",borderRadius:"6px",cursor:"pointer"}} onClick={prevM}>‹</button>
+                <button style={{background:"none",border:`1px solid rgba(200,160,64,0.35)`,color:C.acc,width:"28px",height:"28px",borderRadius:"6px",cursor:"pointer"}} onClick={prevM}>‹</button>
                 <span style={{fontSize:"13px",color:"#f0ebe0"}}>{MONTHS[aMonth]} {aYear}</span>
-                <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"28px",height:"28px",borderRadius:"6px",cursor:"pointer"}} onClick={nextM}>›</button>
+                <button style={{background:"none",border:`1px solid rgba(200,160,64,0.35)`,color:C.acc,width:"28px",height:"28px",borderRadius:"6px",cursor:"pointer"}} onClick={nextM}>›</button>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"2px"}}>
                 {DAY_SHORT.map(d=><div key={d} style={{textAlign:"center",fontSize:"9px",color:C.muted,padding:"2px 0"}}>{d}</div>)}
