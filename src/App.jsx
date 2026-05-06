@@ -532,7 +532,7 @@ function ScheduleTab() {
   useEffect(()=>{
     getSchedule().then(data=>{
       const init={};
-      for(let d=0;d<=6;d++){ const row=data.find(s=>s.day_of_week===d); init[d]={ is_active:row?row.is_active:(d>=1&&d<=5), start_time:row?row.start_time:"09:00", end_time:row?row.end_time:"17:00" }; }
+      for(let d=0;d<=6;d++){ const row=data.find(s=>s.day_of_week===d); init[d]={ is_active:row?row.is_active:(d>=2&&d<=4), start_time:row?row.start_time:"09:00", end_time:row?row.end_time:"17:00" }; }
       setEdits(init); setLoading(false);
     });
   },[]);
@@ -611,7 +611,7 @@ function AdminPanel({ onLogout }) {
   useEffect(()=>{
     if(!schedule.length) return;
     const init={};
-    for(let d=0;d<=6;d++){ const row=schedule.find(s=>s.day_of_week===d); init[d]={is_active:row?row.is_active:(d>=1&&d<=5),start_time:row?row.start_time:"09:00",end_time:row?row.end_time:"17:00"}; }
+    for(let d=0;d<=6;d++){ const row=schedule.find(s=>s.day_of_week===d); init[d]={is_active:row?row.is_active:(d>=2&&d<=4),start_time:row?row.start_time:"09:00",end_time:row?row.end_time:"17:00"}; }
     setSchedEdits(init);
   },[schedule]);
 
