@@ -85,7 +85,7 @@ async function getAllUsers() {
 }
 async function insertBooking(booking) {
   const { error } = await supabase.from("bookings").insert(booking);
-  return !error;
+  return error ? error.message : null;
 }
 async function getSchedule() {
   const { data } = await supabase.from("schedule").select("*").order("day_of_week");
@@ -500,8 +500,8 @@ function AdminPanel({ onLogout }) {
     else { u=await createUser(makePlaceholderEmail(),nameVal,""); }
     if(!u){ setAddErr("Failed to create patient record."); return; }
     const booking={ id:"ACP-"+Math.random().toString(36).substring(2,8).toUpperCase(), treatment:aTreat.name, practitioner:"Lucy Priest", date:`${MONTHS[aMonth]} ${aDate}, ${aYear}`, time:aTime, duration:aTreat.duration, deposit_paid:0, notes:aNotes, source:"admin", patient_name:u.name||nameVal||emailVal, patient_email:u.email };
-    const ok=await insertBooking(booking);
-    if(!ok){ setAddErr("Failed to save. Please try again."); return; }
+    const saveErr=await insertBooking(booking);
+    if(saveErr){ setAddErr(`Failed to save: ${saveErr}`); return; }
     if(aTreat.initialOnly||aTreat.requiresInitial) await updateUserInitial(u.email);
     setAddOk(`✓ Booking ${booking.id} added for ${u.name}`);
     setADate(null); setATime(null); setANotes(""); setAEmail(""); setAName("");
