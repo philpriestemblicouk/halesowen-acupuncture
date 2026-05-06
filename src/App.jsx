@@ -209,7 +209,7 @@ function AuthScreen({ onLogin }) {
     const res = await apiPost('/api/verify-otp', { email: pendingUser.email, code: otp.trim() });
     if (res.error)   { setErr(res.error); return; }
     await updateUserPhone(pendingUser.email, pendingUser.fmtPhone);
-    onLogin({ email: pendingUser.email, name: pendingUser.name, isAdmin: false });
+    onLogin({ email: pendingUser.email, name: pendingUser.name, isAdmin: false, phone: pendingUser.fmtPhone||"" });
   };
 
   const submitLogin = async () => {
@@ -222,7 +222,7 @@ function AuthScreen({ onLogin }) {
           const { error: retryErr } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pass });
           if (!retryErr) {
             await supabase.from("users").update({ password_hash: "" }).eq("email", email.trim().toLowerCase());
-            onLogin({ email: profile.email, name: profile.name, isAdmin: profile.is_admin||false }); return;
+            onLogin({ email: profile.email, name: profile.name, isAdmin: profile.is_admin||false, phone: profile.phone||"" }); return;
           }
         }
       }
@@ -236,7 +236,7 @@ function AuthScreen({ onLogin }) {
       setPendingUser({ ...user, fmtPhone: user.phone });
       setMode("verify"); return;
     }
-    onLogin({ email: user.email, name: user.name, isAdmin: user.is_admin||false });
+    onLogin({ email: user.email, name: user.name, isAdmin: user.is_admin||false, phone: user.phone||"" });
   };
 
   const submit = async () => {
@@ -314,7 +314,7 @@ function BookingFlow({ user, onLogout }) {
   const [viewMonth,setVM]=useState(today.getMonth()); const [viewYear,setVY]=useState(today.getFullYear());
   const [selDate,setSelDate]=useState(null); const [selTime,setSelTime]=useState(null);
   const [slots,setSlots]=useState([]); const [blocked,setBlocked]=useState(new Set());
-  const [form,setForm]=useState({name:user.name,email:user.email,phone:"",notes:""});
+  const [form,setForm]=useState({name:user.name,email:user.email,phone:user.phone||"",notes:""});
   const [card,setCard]=useState({number:"",expiry:"",cvc:"",nameOnCard:""});
   const [processing,setProc]=useState(false); const [confirmed,setConfirmed]=useState(false);
   const [hasInitial,setHasInit]=useState(false); const [schedule,setSchedule]=useState([]);
@@ -995,7 +995,7 @@ export default function App() {
           if(!profile.is_admin && !profile.phone_verified){
             await supabase.auth.signOut();
           } else {
-            setUser({email:profile.email,name:profile.name,isAdmin:profile.is_admin||false});
+            setUser({email:profile.email,name:profile.name,isAdmin:profile.is_admin||false,phone:profile.phone||""});
           }
         }
       }
