@@ -51,7 +51,7 @@ function getBlockedSlots(existingBookings, allSlots, newDuration) {
   allSlots.forEach(slotStr => {
     const slotStart = timeToMins(slotStr); const slotEnd = slotStart + newDuration;
     for (const b of existingBookings) {
-      const bStart = timeToMins(b.time); const bEnd = bStart + (parseInt(b.duration) || 60);
+      const bStart = timeToMins(b.time); const bEnd = bStart + (TREATMENTS.find(t=>t.name===b.treatment)?.duration || 60);
       if (slotStart < bEnd && slotEnd > bStart) { blocked.add(slotStr); break; }
     }
   });
@@ -243,7 +243,7 @@ function BookingFlow({ user, onLogout }) {
   const doConfirm=async()=>{
     setProc(true);
     const id="ACP-"+Math.random().toString(36).substring(2,8).toUpperCase();
-    const booking={ id, treatment:treatment.name, practitioner:"Lucy Priest", date:`${MONTHS[viewMonth]} ${selDate}, ${viewYear}`, time:selTime, duration:treatment.duration, deposit_paid:depositAmt, notes:form.notes, source:"patient", patient_name:user.name, patient_email:user.email };
+    const booking={ id, treatment:treatment.name, practitioner:"Lucy Priest", date:`${MONTHS[viewMonth]} ${selDate}, ${viewYear}`, time:selTime, deposit_paid:depositAmt, notes:form.notes, source:"patient", patient_name:user.name, patient_email:user.email };
     await insertBooking(booking);
     if(treatment.initialOnly) await updateUserInitial(user.email);
     setBookingRef(id);
@@ -499,7 +499,7 @@ function AdminPanel({ onLogout }) {
     if(emailVal){ u=await getUser(emailVal); if(!u) u=await createUser(emailVal,nameVal||emailVal,""); }
     else { u=await createUser(makePlaceholderEmail(),nameVal,""); }
     if(!u){ setAddErr("Failed to create patient record."); return; }
-    const booking={ id:"ACP-"+Math.random().toString(36).substring(2,8).toUpperCase(), treatment:aTreat.name, practitioner:"Lucy Priest", date:`${MONTHS[aMonth]} ${aDate}, ${aYear}`, time:aTime, duration:aTreat.duration, deposit_paid:0, notes:aNotes, source:"admin", patient_name:u.name||nameVal||emailVal, patient_email:u.email };
+    const booking={ id:"ACP-"+Math.random().toString(36).substring(2,8).toUpperCase(), treatment:aTreat.name, practitioner:"Lucy Priest", date:`${MONTHS[aMonth]} ${aDate}, ${aYear}`, time:aTime, deposit_paid:0, notes:aNotes, source:"admin", patient_name:u.name||nameVal||emailVal, patient_email:u.email };
     const saveErr=await insertBooking(booking);
     if(saveErr){ setAddErr(`Failed to save: ${saveErr}`); return; }
     if(aTreat.initialOnly||aTreat.requiresInitial) await updateUserInitial(u.email);
@@ -567,7 +567,7 @@ function AdminPanel({ onLogout }) {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:"8px"}}>
                   <div>
                     <div style={{fontSize:"13px",color:"#f0ebe0",marginBottom:"3px"}}><strong>{b.patient_name||b.patient_email}</strong> — {b.treatment}</div>
-                    <div style={{fontSize:"12px",color:C.muted}}>{b.date} · {b.time}{b.duration?` (${b.duration}min)`:""}</div>
+                    <div style={{fontSize:"12px",color:C.muted}}>{b.date} · {b.time}{TREATMENTS.find(t=>t.name===b.treatment)?.duration?` (${TREATMENTS.find(t=>t.name===b.treatment).duration}min)`:""}</div>
                     {b.notes&&<div style={{fontSize:"11px",color:"rgba(77,166,255,0.6)",marginTop:"3px"}}>Note: {b.notes}</div>}
                   </div>
                   <div style={{display:"flex",gap:"8px",alignItems:"center",flexShrink:0}}>
