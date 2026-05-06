@@ -479,6 +479,8 @@ function AdminPanel({ onLogout }) {
   const [aNotes,setANotes]=useState(""); const [addErr,setAddErr]=useState(""); const [addOk,setAddOk]=useState("");
   const [schedule,setSchedule]=useState([]);
   const [showAddPatient,setShowAddPatient]=useState(false);
+  const [calMonth,setCalMonth]=useState(today.getMonth()); const [calYear,setCalYear]=useState(today.getFullYear());
+  const [selCalDate,setSelCalDate]=useState(null); const [calSlots,setCalSlots]=useState([]);
   const [pName,setPName]=useState(""); const [pEmail,setPEmail]=useState(""); const [pPhone,setPPhone]=useState(""); const [pHasInitial,setPHasInitial]=useState(false);
   const [patientErr,setPatientErr]=useState(""); const [patientOk,setPatientOk]=useState("");
 
@@ -499,6 +501,31 @@ function AdminPanel({ onLogout }) {
   const prevM=()=>{ if(aMonth===0){setAMonth(11);setAYear(y=>y-1);}else setAMonth(m=>m-1); setADate(null);setATime(null); };
   const nextM=()=>{ if(aMonth===11){setAMonth(0);setAYear(y=>y+1);}else setAMonth(m=>m+1); setADate(null);setATime(null); };
   const isPastA=(d)=>{ const dt=new Date(aYear,aMonth,d); dt.setHours(0,0,0,0); const t=new Date(); t.setHours(0,0,0,0); return dt<t; };
+
+  const prevCalM=()=>{ if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1);}else setCalMonth(m=>m-1); setSelCalDate(null); };
+  const nextCalM=()=>{ if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1);}else setCalMonth(m=>m+1); setSelCalDate(null); };
+  const bookingsByDate=bookings.reduce((acc,b)=>{ (acc[b.date]=acc[b.date]||[]).push(b); return acc; },{});
+
+  useEffect(()=>{
+    if(!selCalDate||schedule.length===0) return;
+    const dow=new Date(calYear,calMonth,selCalDate).getDay();
+    const daySched=schedule.find(s=>s.day_of_week===dow);
+    const dateStr=`${MONTHS[calMonth]} ${selCalDate}, ${calYear}`;
+    const dayBookings=bookingsByDate[dateStr]||[];
+    if(!daySched||!daySched.is_active){
+      setCalSlots(dayBookings.map(b=>({ slot:b.time, booking:b, isStart:true })));
+      return;
+    }
+    const allSlots=generateSlots(daySched.start_time,daySched.end_time,30);
+    setCalSlots(allSlots.map(slotStr=>{
+      const slotStart=timeToMins(slotStr);
+      for(const b of dayBookings){
+        const bStart=timeToMins(b.time); const bDur=TREATMENTS.find(t=>t.name===b.treatment)?.duration||60;
+        if(slotStart>=bStart&&slotStart<bStart+bDur) return { slot:slotStr, booking:b, isStart:slotStart===bStart };
+      }
+      return { slot:slotStr, booking:null, isStart:false };
+    }));
+  },[selCalDate,calMonth,calYear,schedule,bookings]);
 
   const addBooking=async()=>{
     setAddErr(""); setAddOk("");
@@ -569,24 +596,69 @@ function AdminPanel({ onLogout }) {
 
         {tab==="bookings"&&(
           <div style={SS.card}>
-            <div style={SS.secT}>All Appointments ({bookings.length})</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px"}}>
+              <div style={{...SS.secT,margin:0}}>Appointment Calendar</div>
+              <div style={{fontSize:"11px",color:C.muted}}>{bookings.length} total bookings</div>
+            </div>
             {loading&&<div style={{color:C.muted,fontSize:"13px"}}>Loading…</div>}
-            {!loading&&bookings.length===0&&<div style={{color:C.muted,fontSize:"13px"}}>No bookings yet.</div>}
-            {bookings.map(b=>(
-              <div key={b.id} style={{padding:"14px",borderRadius:"10px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(77,166,255,0.1)",marginBottom:"8px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:"8px"}}>
-                  <div>
-                    <div style={{fontSize:"13px",color:"#f0ebe0",marginBottom:"3px"}}><strong>{b.patient_name||b.patient_email}</strong> — {b.treatment}</div>
-                    <div style={{fontSize:"12px",color:C.muted}}>{b.date} · {b.time}{TREATMENTS.find(t=>t.name===b.treatment)?.displayDuration?` (${TREATMENTS.find(t=>t.name===b.treatment).displayDuration})`:""}</div>
-                    {b.notes&&<div style={{fontSize:"11px",color:"rgba(77,166,255,0.6)",marginTop:"3px"}}>Note: {b.notes}</div>}
-                  </div>
-                  <div style={{display:"flex",gap:"8px",alignItems:"center",flexShrink:0}}>
-                    <span style={SS.badge(b.source==="admin")}>{b.source==="admin"?"Admin Added":"Patient"}</span>
-                    <span style={{fontSize:"11px",color:C.acc,fontFamily:"monospace"}}>{b.id}</span>
+            {!loading&&(<>
+              {/* Month navigator */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}}>
+                <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"30px",height:"30px",borderRadius:"7px",cursor:"pointer",fontSize:"16px"}} onClick={prevCalM}>‹</button>
+                <span style={{fontSize:"15px",color:"#f0ebe0",fontFamily:"Palatino,serif"}}>{MONTHS[calMonth]} {calYear}</span>
+                <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"30px",height:"30px",borderRadius:"7px",cursor:"pointer",fontSize:"16px"}} onClick={nextCalM}>›</button>
+              </div>
+              {/* Calendar grid */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"3px",marginBottom:"16px"}}>
+                {DAY_SHORT.map(d=><div key={d} style={{textAlign:"center",fontSize:"9px",color:C.muted,padding:"3px 0",marginBottom:"2px"}}>{d}</div>)}
+                {Array.from({length:getFirstDay(calYear,calMonth)}).map((_,i)=><div key={"e"+i}/>)}
+                {Array.from({length:getDaysInMonth(calYear,calMonth)}).map((_,i)=>{
+                  const d=i+1; const dateStr=`${MONTHS[calMonth]} ${d}, ${calYear}`;
+                  const dayBks=bookingsByDate[dateStr]||[];
+                  const isSel=selCalDate===d;
+                  const isToday=d===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
+                  const dow=new Date(calYear,calMonth,d).getDay();
+                  const hasSched=schedule.find(s=>s.day_of_week===dow&&s.is_active);
+                  return (
+                    <div key={d} onClick={()=>setSelCalDate(isSel?null:d)} style={{aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:"7px",cursor:"pointer",background:isSel?C.acc:"transparent",border:isToday&&!isSel?`1px solid rgba(77,166,255,0.4)`:"1px solid transparent",color:isSel?C.dark:hasSched?"#c8c0b0":"rgba(255,255,255,0.2)"}}>
+                      <span style={{fontSize:"12px",fontWeight:isSel||isToday?"bold":"normal"}}>{d}</span>
+                      {dayBks.length>0&&<div style={{width:"6px",height:"6px",borderRadius:"50%",background:isSel?"white":"#ff6b6b",marginTop:"1px"}}/>}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Legend */}
+              <div style={{display:"flex",gap:"16px",marginBottom:"16px",fontSize:"10px",color:C.muted}}>
+                <span style={{display:"flex",alignItems:"center",gap:"5px"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#ff6b6b",display:"inline-block"}}/>Has bookings</span>
+                <span style={{display:"flex",alignItems:"center",gap:"5px"}}><span style={{width:"8px",height:"8px",borderRadius:"2px",background:"rgba(50,200,100,0.4)",display:"inline-block"}}/>Available slot</span>
+                <span style={{display:"flex",alignItems:"center",gap:"5px"}}><span style={{width:"8px",height:"8px",borderRadius:"2px",background:"rgba(255,80,80,0.4)",display:"inline-block"}}/>Booked slot</span>
+              </div>
+              {/* Day slot view */}
+              {selCalDate&&(
+                <div style={{borderTop:`1px solid rgba(77,166,255,0.15)`,paddingTop:"16px"}}>
+                  <div style={{fontSize:"13px",color:"#f0ebe0",fontFamily:"Palatino,serif",marginBottom:"12px"}}>{MONTHS[calMonth]} {selCalDate}, {calYear}</div>
+                  {calSlots.length===0&&<div style={{fontSize:"12px",color:C.muted}}>No schedule set for this day — add working hours in the Schedule tab.</div>}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px"}} className="time-grid">
+                    {calSlots.map(({slot,booking,isStart})=>(
+                      <div key={slot} style={{padding:"10px 8px",borderRadius:"8px",background:booking?"rgba(255,60,60,0.12)":"rgba(50,200,100,0.08)",border:`1px solid ${booking?"rgba(255,80,80,0.3)":"rgba(50,200,100,0.2)"}`,minHeight:"58px"}}>
+                        <div style={{fontSize:"11px",fontWeight:"bold",color:booking?"#ff8888":"#6dd06d",marginBottom:"3px"}}>{slot}</div>
+                        {booking&&isStart?(
+                          <>
+                            <div style={{fontSize:"11px",color:"#f0ebe0",lineHeight:"1.4",fontWeight:"500"}}>{booking.patient_name||booking.patient_email}</div>
+                            <div style={{fontSize:"10px",color:"rgba(255,136,136,0.7)",marginTop:"2px"}}>{booking.treatment}</div>
+                          </>
+                        ):booking?(
+                          <div style={{fontSize:"9px",color:"rgba(255,100,100,0.4)",marginTop:"2px"}}>—</div>
+                        ):(
+                          <div style={{fontSize:"10px",color:"rgba(50,200,100,0.5)"}}>Available</div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            ))}
+              )}
+              {!selCalDate&&<div style={{fontSize:"12px",color:C.muted,textAlign:"center",padding:"8px 0"}}>Select a day to view its slots</div>}
+            </>)}
           </div>
         )}
 
