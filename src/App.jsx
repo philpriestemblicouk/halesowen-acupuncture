@@ -77,8 +77,13 @@ function formatPhone(raw) {
   return s.startsWith('0') ? '+44' + s.slice(1) : '+44' + s;
 }
 async function apiPost(path, body) {
-  const r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-  return r.json();
+  try {
+    const r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    const text = await r.text();
+    try { return JSON.parse(text); } catch { return { error: `Server error: ${text.slice(0,120)}` }; }
+  } catch(e) {
+    return { error: e.message };
+  }
 }
 async function updateUserInitial(email) {
   await supabase.from("users").update({ has_initial: true }).eq("email", email.toLowerCase());
@@ -230,10 +235,15 @@ function AuthScreen({ onLogin }) {
 
   const submit = async () => {
     setErr(""); setLoading(true);
-    if (!email||!pass) { setErr("Please fill in all fields."); setLoading(false); return; }
-    if (mode==="register") await submitRegister();
-    else await submitLogin();
-    setLoading(false);
+    try {
+      if (!email||!pass) { setErr("Please fill in all fields."); return; }
+      if (mode==="register") await submitRegister();
+      else await submitLogin();
+    } catch(e) {
+      setErr("Something went wrong: " + e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const verify = async () => {
