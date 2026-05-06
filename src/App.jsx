@@ -230,6 +230,12 @@ function AuthScreen({ onLogin }) {
     }
     const user = await getUser(email);
     if (!user) { setErr("Account not found. Please register."); return; }
+    if (!user.is_admin && !user.phone_verified && user.phone) {
+      const r = await apiPost('/api/send-otp', { phone: user.phone, email: user.email });
+      if (r.error) { setErr("Couldn't send verification code: " + r.error); return; }
+      setPendingUser({ ...user, fmtPhone: user.phone });
+      setMode("verify"); return;
+    }
     onLogin({ email: user.email, name: user.name, isAdmin: user.is_admin||false });
   };
 
@@ -985,7 +991,13 @@ export default function App() {
     supabase.auth.getSession().then(async({ data:{ session } })=>{
       if(session){
         const profile=await getUser(session.user.email);
-        if(profile) setUser({email:profile.email,name:profile.name,isAdmin:profile.is_admin||false});
+        if(profile){
+          if(!profile.is_admin && !profile.phone_verified){
+            await supabase.auth.signOut();
+          } else {
+            setUser({email:profile.email,name:profile.name,isAdmin:profile.is_admin||false});
+          }
+        }
       }
       setAuthLoading(false);
     });
