@@ -630,15 +630,6 @@ function AdminPanel({ onLogout }) {
           <button style={SS.btnS} onClick={onLogout}>Sign Out</button>
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px",marginBottom:"20px"}} className="stat-grid">
-          {[["Total Bookings",bookings.length,"📅"],["Registered Patients",patients.length,"👤"],["Admin Added",bookings.filter(b=>b.source==="admin").length,"⚙️"]].map(([l,v,ic])=>(
-            <div key={l} style={{...SS.card,padding:"20px",marginBottom:0,textAlign:"center"}}>
-              <div style={{fontSize:"24px",marginBottom:"4px"}}>{ic}</div>
-              <div style={{fontSize:"22px",color:C.acc,fontFamily:"Palatino,serif"}}>{v}</div>
-              <div style={{fontSize:"11px",color:C.muted}}>{l}</div>
-            </div>
-          ))}
-        </div>
 
         <div style={{display:"flex",gap:"8px",marginBottom:"20px",flexWrap:"wrap"}}>
           {tabBtn("bookings","All Bookings")}{tabBtn("patients","Patients")}{tabBtn("add","+ Add Booking")}{tabBtn("schedule","📅 Schedule")}
@@ -876,6 +867,12 @@ function AdminPanel({ onLogout }) {
             <ScheduleTab/>
           </div>
         )}
+
+        <div style={{display:"flex",gap:"20px",justifyContent:"center",flexWrap:"wrap",padding:"20px 0 8px",borderTop:`1px solid ${C.bord}`,marginTop:"8px",fontSize:"12px",color:C.muted}}>
+          <span>📅 <strong style={{color:C.sub}}>{bookings.length}</strong> bookings</span>
+          <span>👤 <strong style={{color:C.sub}}>{patients.length}</strong> patients</span>
+          <span>⚙️ <strong style={{color:C.sub}}>{bookings.filter(b=>b.source==="admin").length}</strong> admin added</span>
+        </div>
       </div>
     </div>
   );
