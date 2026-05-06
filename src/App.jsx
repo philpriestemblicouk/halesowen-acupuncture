@@ -771,8 +771,10 @@ function AdminPanel({ onLogout }) {
 }
 
 export default function App() {
-  const [user,setUser]=useState(null);
-  if(!user) return <AuthScreen onLogin={setUser}/>;
-  if(user.isAdmin) return <AdminPanel onLogout={()=>setUser(null)}/>;
-  return <BookingFlow user={user} onLogout={()=>setUser(null)}/>;
+  const [user,setUser]=useState(()=>{ try{ const s=localStorage.getItem("ha_user"); return s?JSON.parse(s):null; }catch{ return null; } });
+  const login=(u)=>{ localStorage.setItem("ha_user",JSON.stringify(u)); setUser(u); };
+  const logout=()=>{ localStorage.removeItem("ha_user"); setUser(null); };
+  if(!user) return <AuthScreen onLogin={login}/>;
+  if(user.isAdmin) return <AdminPanel onLogout={logout}/>;
+  return <BookingFlow user={user} onLogout={logout}/>;
 }
