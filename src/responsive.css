@@ -1,0 +1,51 @@
+/* ── Mobile-first responsive overrides ── */
+
+@media (max-width: 520px) {
+
+  /* Two-column form grids → single column */
+  .r2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Treatment cards → single column */
+  .treatment-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Time slot picker → two columns instead of three */
+  .time-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Admin stats → single column */
+  .stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Step progress bar labels → hide text, keep circles */
+  .steps-bar span {
+    display: none;
+  }
+
+  .steps-bar {
+    gap: 0 !important;
+  }
+
+  /* Reduce outer padding on small screens */
+  .page-wrap {
+    padding: 24px 14px !important;
+  }
+
+  /* Admin panel header: stack logo + sign-out */
+  .admin-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+
+  /* Patient row actions: stack below name */
+  .patient-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
