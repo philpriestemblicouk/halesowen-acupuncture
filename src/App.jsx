@@ -193,7 +193,7 @@ function AuthScreen({ onLogin }) {
     if (authErr)                 { setErr(authErr.message); return; }
     const user = await createUser(email, name, "", fmtPhone);
     if (!user)                   { setErr("Registration failed. Please try again."); return; }
-    const res = await apiPost('/api/send-otp', { phone: fmtPhone });
+    const res = await apiPost('/api/send-otp', { phone: fmtPhone, email: email.trim().toLowerCase() });
     if (res.error)               { setErr("Couldn't send verification code: " + res.error); return; }
     setPendingUser({ ...user, fmtPhone });
     setMode("verify");
@@ -201,7 +201,7 @@ function AuthScreen({ onLogin }) {
 
   const submitVerify = async () => {
     if (!otp.trim()) { setErr("Enter the 6-digit code."); return; }
-    const res = await apiPost('/api/verify-otp', { phone: pendingUser.fmtPhone, code: otp.trim() });
+    const res = await apiPost('/api/verify-otp', { email: pendingUser.email, code: otp.trim() });
     if (res.error)   { setErr(res.error); return; }
     await updateUserPhone(pendingUser.email, pendingUser.fmtPhone);
     onLogin({ email: pendingUser.email, name: pendingUser.name, isAdmin: false });
@@ -263,7 +263,7 @@ function AuthScreen({ onLogin }) {
               {err&&<div style={SS.err}>{err}</div>}
               <div style={{marginTop:"20px"}}><button style={SS.btnP(otp.length===6)} onClick={verify} disabled={loading}>{loading?"Verifying…":"Verify & Continue"}</button></div>
               <div style={{marginTop:"12px",fontSize:"12px",color:C.muted,textAlign:"center"}}>
-                <span style={{color:C.acc,cursor:"pointer"}} onClick={async()=>{ setErr(""); const r=await apiPost('/api/send-otp',{phone:pendingUser.fmtPhone}); if(r.error) setErr(r.error); }}>Resend code</span>
+                <span style={{color:C.acc,cursor:"pointer"}} onClick={async()=>{ setErr(""); const r=await apiPost('/api/send-otp',{phone:pendingUser.fmtPhone,email:pendingUser.email}); if(r.error) setErr(r.error); }}>Resend code</span>
               </div>
             </>
           ):(
