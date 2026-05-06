@@ -101,6 +101,14 @@ async function deleteUser(userId) {
   const { error } = await supabase.from("users").delete().eq("id", userId);
   return !error;
 }
+async function deleteBooking(id) {
+  const { error } = await supabase.from("bookings").delete().eq("id", id);
+  return !error;
+}
+async function updateBooking(id, date, time) {
+  const { error } = await supabase.from("bookings").update({ date, time }).eq("id", id);
+  return !error;
+}
 function makePlaceholderEmail() {
   return `noemail-${Date.now()}-${Math.random().toString(36).slice(2,6)}@manual`;
 }
@@ -481,6 +489,11 @@ function AdminPanel({ onLogout }) {
   const [showAddPatient,setShowAddPatient]=useState(false);
   const [calMonth,setCalMonth]=useState(today.getMonth()); const [calYear,setCalYear]=useState(today.getFullYear());
   const [selCalDate,setSelCalDate]=useState(null); const [calSlots,setCalSlots]=useState([]);
+  const [selBooking,setSelBooking]=useState(null); const [editMode,setEditMode]=useState(null);
+  const [editMonth,setEditMonth]=useState(today.getMonth()); const [editYear,setEditYear]=useState(today.getFullYear());
+  const [editDate,setEditDate]=useState(null); const [editTime,setEditTime]=useState(null);
+  const [editSlots,setEditSlots]=useState([]); const [editBlocked,setEditBlocked]=useState(new Set());
+  const [editErr,setEditErr]=useState(""); const [editOk,setEditOk]=useState("");
   const [pName,setPName]=useState(""); const [pEmail,setPEmail]=useState(""); const [pPhone,setPPhone]=useState(""); const [pHasInitial,setPHasInitial]=useState(false);
   const [patientErr,setPatientErr]=useState(""); const [patientOk,setPatientOk]=useState("");
 
@@ -526,6 +539,43 @@ function AdminPanel({ onLogout }) {
       return { slot:slotStr, booking:null, isStart:false };
     }));
   },[selCalDate,calMonth,calYear,schedule,bookings]);
+
+  useEffect(()=>{
+    if(!editDate||!selBooking||schedule.length===0) return;
+    const dow=new Date(editYear,editMonth,editDate).getDay();
+    const daySched=schedule.find(s=>s.day_of_week===dow);
+    if(!daySched||!daySched.is_active){ setEditSlots([]); return; }
+    const dur=TREATMENTS.find(t=>t.name===selBooking.treatment)?.duration||60;
+    const avail=generateSlots(daySched.start_time,daySched.end_time,dur);
+    setEditSlots(avail);
+    const dateStr=`${MONTHS[editMonth]} ${editDate}, ${editYear}`;
+    getBookingsForDate(dateStr).then(ex=>{
+      const others=ex.filter(b=>b.id!==selBooking.id);
+      setEditBlocked(getBlockedSlots(others,avail,dur));
+    });
+  },[editDate,editMonth,editYear,selBooking,schedule]);
+
+  const prevEditM=()=>{ if(editMonth===0){setEditMonth(11);setEditYear(y=>y-1);}else setEditMonth(m=>m-1); setEditDate(null);setEditTime(null); };
+  const nextEditM=()=>{ if(editMonth===11){setEditMonth(0);setEditYear(y=>y+1);}else setEditMonth(m=>m+1); setEditDate(null);setEditTime(null); };
+
+  const openEdit=(booking)=>{ setSelBooking(booking); setEditMode(null); setEditErr(""); setEditOk(""); setEditDate(null); setEditTime(null); };
+  const closeEdit=()=>{ setSelBooking(null); setEditMode(null); setEditErr(""); setEditOk(""); };
+
+  const handleDeleteBooking=async()=>{
+    if(!window.confirm(`Delete booking for ${selBooking.patient_name}? This cannot be undone.`)) return;
+    const ok=await deleteBooking(selBooking.id);
+    if(ok){ closeEdit(); loadAll(); }
+  };
+
+  const handleReschedule=async()=>{
+    if(!editDate||!editTime){ setEditErr("Select a new date and time."); return; }
+    setEditErr(""); setEditOk("");
+    const dateStr=`${MONTHS[editMonth]} ${editDate}, ${editYear}`;
+    const ok=await updateBooking(selBooking.id,dateStr,editTime);
+    if(!ok){ setEditErr("Failed to update. Please try again."); return; }
+    setEditOk(`✓ Moved to ${dateStr} at ${editTime}`);
+    setTimeout(()=>{ closeEdit(); loadAll(); },1200);
+  };
 
   const addBooking=async()=>{
     setAddErr(""); setAddOk("");
@@ -639,22 +689,83 @@ function AdminPanel({ onLogout }) {
                   <div style={{fontSize:"13px",color:"#f0ebe0",fontFamily:"Palatino,serif",marginBottom:"12px"}}>{MONTHS[calMonth]} {selCalDate}, {calYear}</div>
                   {calSlots.length===0&&<div style={{fontSize:"12px",color:C.muted}}>No schedule set for this day — add working hours in the Schedule tab.</div>}
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px"}} className="time-grid">
-                    {calSlots.map(({slot,booking,isStart})=>(
-                      <div key={slot} style={{padding:"10px 8px",borderRadius:"8px",background:booking?"rgba(255,60,60,0.12)":"rgba(50,200,100,0.08)",border:`1px solid ${booking?"rgba(255,80,80,0.3)":"rgba(50,200,100,0.2)"}`,minHeight:"58px"}}>
-                        <div style={{fontSize:"11px",fontWeight:"bold",color:booking?"#ff8888":"#6dd06d",marginBottom:"3px"}}>{slot}</div>
-                        {booking&&isStart?(
-                          <>
-                            <div style={{fontSize:"11px",color:"#f0ebe0",lineHeight:"1.4",fontWeight:"500"}}>{booking.patient_name||booking.patient_email}</div>
-                            <div style={{fontSize:"10px",color:"rgba(255,136,136,0.7)",marginTop:"2px"}}>{booking.treatment}</div>
-                          </>
-                        ):booking?(
-                          <div style={{fontSize:"9px",color:"rgba(255,100,100,0.4)",marginTop:"2px"}}>—</div>
-                        ):(
-                          <div style={{fontSize:"10px",color:"rgba(50,200,100,0.5)"}}>Available</div>
-                        )}
-                      </div>
-                    ))}
+                    {calSlots.map(({slot,booking,isStart})=>{
+                      const isSel=selBooking&&booking&&selBooking.id===booking.id;
+                      return (
+                        <div key={slot} onClick={()=>booking&&isStart&&(isSel?closeEdit():openEdit(booking))} style={{padding:"10px 8px",borderRadius:"8px",background:isSel?"rgba(255,60,60,0.25)":booking?"rgba(255,60,60,0.12)":"rgba(50,200,100,0.08)",border:`2px solid ${isSel?"rgba(255,80,80,0.8)":booking?"rgba(255,80,80,0.3)":"rgba(50,200,100,0.2)"}`,minHeight:"58px",cursor:booking&&isStart?"pointer":"default",transition:"border 0.15s"}}>
+                          <div style={{fontSize:"11px",fontWeight:"bold",color:booking?"#ff8888":"#6dd06d",marginBottom:"3px"}}>{slot}</div>
+                          {booking&&isStart?(
+                            <>
+                              <div style={{fontSize:"11px",color:"#f0ebe0",lineHeight:"1.4",fontWeight:"500"}}>{booking.patient_name||booking.patient_email}</div>
+                              <div style={{fontSize:"10px",color:"rgba(255,136,136,0.7)",marginTop:"2px"}}>{booking.treatment}</div>
+                              <div style={{fontSize:"9px",color:C.acc,marginTop:"3px"}}>tap to edit</div>
+                            </>
+                          ):booking?(
+                            <div style={{fontSize:"9px",color:"rgba(255,100,100,0.4)",marginTop:"2px"}}>—</div>
+                          ):(
+                            <div style={{fontSize:"10px",color:"rgba(50,200,100,0.5)"}}>Available</div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
+
+                  {/* Booking action panel */}
+                  {selBooking&&(
+                    <div style={{marginTop:"16px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(77,166,255,0.2)",borderRadius:"12px",padding:"16px"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"12px"}}>
+                        <div>
+                          <div style={{fontSize:"13px",color:"#f0ebe0",fontWeight:"500",marginBottom:"3px"}}>{selBooking.patient_name||selBooking.patient_email}</div>
+                          <div style={{fontSize:"12px",color:C.muted}}>{selBooking.treatment} · {selBooking.date} · {selBooking.time}</div>
+                          {selBooking.deposit_paid>0&&<div style={{fontSize:"11px",color:C.acc,marginTop:"3px"}}>Deposit paid: £{selBooking.deposit_paid}</div>}
+                          {selBooking.notes&&<div style={{fontSize:"11px",color:C.muted,marginTop:"3px"}}>Note: {selBooking.notes}</div>}
+                        </div>
+                        <button onClick={closeEdit} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:"18px",lineHeight:1,padding:"0 4px"}}>×</button>
+                      </div>
+                      <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+                        <button onClick={()=>setEditMode(editMode==="reschedule"?null:"reschedule")} style={{padding:"8px 16px",background:editMode==="reschedule"?"rgba(77,166,255,0.2)":"transparent",border:`1px solid ${C.acc}`,borderRadius:"7px",color:C.acc,cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>
+                          {editMode==="reschedule"?"▲ Cancel Move":"↕ Reschedule"}
+                        </button>
+                        <button onClick={handleDeleteBooking} style={{padding:"8px 16px",background:"transparent",border:"1px solid rgba(255,100,100,0.4)",borderRadius:"7px",color:"#ff8888",cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>
+                          🗑 Delete / Cancel
+                        </button>
+                      </div>
+
+                      {editMode==="reschedule"&&(
+                        <div style={{marginTop:"14px",paddingTop:"14px",borderTop:"1px solid rgba(77,166,255,0.1)"}}>
+                          <div style={{fontSize:"10px",letterSpacing:"2px",color:C.acc,marginBottom:"10px",textTransform:"uppercase"}}>Choose new date & time</div>
+                          <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(77,166,255,0.15)",borderRadius:"10px",padding:"12px",marginBottom:"12px"}}>
+                            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"10px"}}>
+                              <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"26px",height:"26px",borderRadius:"6px",cursor:"pointer"}} onClick={prevEditM}>‹</button>
+                              <span style={{fontSize:"13px",color:"#f0ebe0"}}>{MONTHS[editMonth]} {editYear}</span>
+                              <button style={{background:"none",border:`1px solid rgba(77,166,255,0.3)`,color:C.acc,width:"26px",height:"26px",borderRadius:"6px",cursor:"pointer"}} onClick={nextEditM}>›</button>
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"2px"}}>
+                              {DAY_SHORT.map(d=><div key={d} style={{textAlign:"center",fontSize:"9px",color:C.muted,padding:"2px 0"}}>{d}</div>)}
+                              {Array.from({length:getFirstDay(editYear,editMonth)}).map((_,i)=><div key={"e"+i}/>)}
+                              {Array.from({length:getDaysInMonth(editYear,editMonth)}).map((_,i)=>{ const d=i+1; const sel=editDate===d; const dow2=new Date(editYear,editMonth,d).getDay(); const hasSch=schedule.find(s=>s.day_of_week===dow2&&s.is_active); return (
+                                <div key={d} onClick={()=>{setEditDate(d);setEditTime(null);}} style={{aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:"5px",fontSize:"11px",cursor:hasSch?"pointer":"not-allowed",background:sel?C.acc:"transparent",color:sel?C.dark:hasSch?"#c8c0b0":"rgba(255,255,255,0.15)",fontWeight:sel?"bold":"normal"}}>{d}</div>
+                              ); })}
+                            </div>
+                          </div>
+                          {editDate&&editSlots.length===0&&<div style={{fontSize:"12px",color:C.muted,marginBottom:"10px"}}>No slots available on this day.</div>}
+                          {editDate&&editSlots.length>0&&(
+                            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"6px",marginBottom:"12px"}} className="time-grid">
+                              {editSlots.map(t=>{ const blocked=editBlocked.has(t); const sel=editTime===t; return (
+                                <div key={t} onClick={()=>!blocked&&setEditTime(t)} style={{padding:"8px 6px",textAlign:"center",borderRadius:"7px",fontSize:"11px",cursor:blocked?"not-allowed":"pointer",background:sel?C.acc:blocked?"transparent":"rgba(255,255,255,0.03)",color:sel?C.dark:blocked?"rgba(255,255,255,0.2)":"#c8c0b0",border:sel?"none":blocked?"1px dashed rgba(255,100,100,0.2)":"1px solid rgba(255,255,255,0.1)"}}>
+                                  <div>{t}</div>
+                                  {blocked&&<div style={{fontSize:"9px",color:"rgba(255,100,100,0.5)"}}>Taken</div>}
+                                </div>
+                              ); })}
+                            </div>
+                          )}
+                          {editErr&&<div style={SS.err}>{editErr}</div>}
+                          {editOk&&<div style={{color:"#6dd06d",fontSize:"12px",marginBottom:"8px"}}>{editOk}</div>}
+                          <button style={SS.btnP(!!(editDate&&editTime))} onClick={handleReschedule}>Confirm Reschedule</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               {!selCalDate&&<div style={{fontSize:"12px",color:C.muted,textAlign:"center",padding:"8px 0"}}>Select a day to view its slots</div>}
