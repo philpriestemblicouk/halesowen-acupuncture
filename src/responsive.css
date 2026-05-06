@@ -1,3 +1,10 @@
+/* ── Safe area inset for PWA standalone mode (iPhone notch / status bar) ── */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .page-wrap {
+    padding-top: calc(40px + env(safe-area-inset-top)) !important;
+  }
+}
+
 /* ── Mobile-first responsive overrides ── */
 
 @media (max-width: 520px) {
@@ -31,9 +38,9 @@
     gap: 0 !important;
   }
 
-  /* Reduce outer padding on small screens */
+  /* Reduce outer padding on small screens, keep safe area at top */
   .page-wrap {
-    padding: 24px 14px !important;
+    padding: calc(24px + env(safe-area-inset-top)) 14px 24px !important;
   }
 
   /* Admin panel header: stack logo + sign-out */
