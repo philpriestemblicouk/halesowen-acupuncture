@@ -685,11 +685,14 @@ function AdminPanel({ onLogout }) {
   const toggleBlockSlot=async(slotStr, existingBooking)=>{
     if(existingBooking){
       if(existingBooking.source!=='blocked') return;
-      await deleteBooking(existingBooking.id); loadAll(); return;
+      await deleteBooking(existingBooking.id);
+      setBookings(prev=>prev.filter(b=>b.id!==existingBooking.id));
+      return;
     }
     const dateStr=`${MONTHS[calMonth]} ${selCalDate}, ${calYear}`;
-    await insertBooking({ id:"BLK-"+Math.random().toString(36).substring(2,8).toUpperCase(), source:"blocked", date:dateStr, time:slotStr, treatment:"Initial Consultation", patient_name:"Unavailable", patient_email:"blocked@system", deposit_paid:0 });
-    loadAll();
+    const newBlock={ id:"BLK-"+Math.random().toString(36).substring(2,8).toUpperCase(), source:"blocked", date:dateStr, time:slotStr, treatment:"Initial Consultation", patient_name:"Unavailable", patient_email:"blocked@system", deposit_paid:0 };
+    await insertBooking(newBlock);
+    setBookings(prev=>[...prev, newBlock]);
   };
 
   const openEdit=(booking)=>{ setSelBooking(booking); setEditMode(null); setEditErr(""); setEditOk(""); setEditDate(null); setEditTime(null); };
