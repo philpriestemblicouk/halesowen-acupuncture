@@ -614,7 +614,7 @@ function AdminPanel({ onLogout }) {
   const [editErr,setEditErr]=useState(""); const [editOk,setEditOk]=useState("");
   const [pName,setPName]=useState(""); const [pEmail,setPEmail]=useState(""); const [pPhone,setPPhone]=useState(""); const [pHasInitial,setPHasInitial]=useState(false);
   const [patientErr,setPatientErr]=useState(""); const [patientOk,setPatientOk]=useState("");
-  const [editPatId,setEditPatId]=useState(null); const [editPatName,setEditPatName]=useState(""); const [editPatPhone,setEditPatPhone]=useState(""); const [editPatNotes,setEditPatNotes]=useState(""); const [editPatInit,setEditPatInit]=useState(false); const [editPatErr,setEditPatErr]=useState(""); const [editPatOk,setEditPatOk]=useState("");
+  const [editPatId,setEditPatId]=useState(null); const [editPatName,setEditPatName]=useState(""); const [editPatEmail,setEditPatEmail]=useState(""); const [editPatPhone,setEditPatPhone]=useState(""); const [editPatNotes,setEditPatNotes]=useState(""); const [editPatInit,setEditPatInit]=useState(false); const [editPatErr,setEditPatErr]=useState(""); const [editPatOk,setEditPatOk]=useState("");
   const [aPatientId,setAPatientId]=useState("");
   const [schedEdits,setSchedEdits]=useState({}); const [schedSaving,setSchedSaving]=useState(null); const [schedSaveOk,setSchedSaveOk]=useState("");
 
@@ -737,9 +737,9 @@ function AdminPanel({ onLogout }) {
     loadAll();
   };
 
-  const openEditPat=(p)=>{ const noEmail=isManualEmail(p.email); const name=noEmail?p.name.split(" — ")[0]:p.name; const phone=p.phone||(noEmail&&p.name.includes(" — ")?p.name.split(" — ")[1]:"")||""; setEditPatId(p.id); setEditPatName(name); setEditPatPhone(phone); setEditPatNotes(p.notes||""); setEditPatInit(p.has_initial||false); setEditPatErr(""); setEditPatOk(""); };
+  const openEditPat=(p)=>{ const noEmail=isManualEmail(p.email); const name=noEmail?p.name.split(" — ")[0]:p.name; const phone=p.phone||(noEmail&&p.name.includes(" — ")?p.name.split(" — ")[1]:"")||""; setEditPatId(p.id); setEditPatName(name); setEditPatEmail(noEmail?"":p.email); setEditPatPhone(phone); setEditPatNotes(p.notes||""); setEditPatInit(p.has_initial||false); setEditPatErr(""); setEditPatOk(""); };
 
-  const handleSavePatient=async()=>{ setEditPatErr(""); setEditPatOk(""); if(!editPatName.trim()){ setEditPatErr("Name is required."); return; } const { error }=await supabase.from("users").update({ name:editPatName.trim(), phone:editPatPhone.trim()||null, notes:editPatNotes.trim()||null, has_initial:editPatInit }).eq("id",editPatId); if(error){ setEditPatErr("Failed to save."); return; } setEditPatOk("✓ Saved"); setTimeout(()=>{ setEditPatId(null); setEditPatOk(""); loadAll(); },700); };
+  const handleSavePatient=async()=>{ setEditPatErr(""); setEditPatOk(""); if(!editPatName.trim()){ setEditPatErr("Name is required."); return; } const updates={ name:editPatName.trim(), phone:editPatPhone.trim()||null, notes:editPatNotes.trim()||null, has_initial:editPatInit }; if(editPatEmail.trim()) updates.email=editPatEmail.trim().toLowerCase(); const { error }=await supabase.from("users").update(updates).eq("id",editPatId); if(error){ setEditPatErr("Failed to save."); return; } setEditPatOk("✓ Saved"); setTimeout(()=>{ setEditPatId(null); setEditPatOk(""); loadAll(); },700); };
 
   const handleDeletePatient=async(patientId,patientName,patientEmail)=>{
     if(patientEmail==="admin@halesowenacupuncture.co.uk") return;
@@ -1007,8 +1007,9 @@ function AdminPanel({ onLogout }) {
                     <div style={{padding:"16px",borderTop:`1px solid ${C.bord}`,background:"rgba(122,92,14,0.03)"}}>
                       <div style={SS.r2} className="r2">
                         <div style={SS.ig}><label style={SS.lbl}>Full Name *</label><input style={SS.inp} value={editPatName} onChange={e=>setEditPatName(e.target.value)}/></div>
-                        <div style={SS.ig}><label style={SS.lbl}>Phone</label><input style={SS.inp} value={editPatPhone} onChange={e=>setEditPatPhone(e.target.value)} placeholder="+44 7700 000000"/></div>
+                        <div style={SS.ig}><label style={SS.lbl}>Email</label><input style={SS.inp} type="email" value={editPatEmail} onChange={e=>setEditPatEmail(e.target.value)} placeholder="jane@example.com"/></div>
                       </div>
+                      <div style={SS.ig}><label style={SS.lbl}>Phone</label><input style={SS.inp} value={editPatPhone} onChange={e=>setEditPatPhone(e.target.value)} placeholder="+44 7700 000000"/></div>
                       <div style={SS.ig}><label style={SS.lbl}>Patient Notes</label><textarea style={{...SS.inp,resize:"vertical",minHeight:"60px"}} value={editPatNotes} onChange={e=>setEditPatNotes(e.target.value)} placeholder="Allergies, conditions, preferences…"/></div>
                       <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px",cursor:"pointer"}} onClick={()=>setEditPatInit(v=>!v)}>
                         <div style={{width:"18px",height:"18px",borderRadius:"4px",border:`1px solid ${editPatInit?C.acc:"rgba(200,160,64,0.35)"}`,background:editPatInit?"rgba(200,160,64,0.15)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",color:C.acc}}>{editPatInit?"✓":""}</div>
