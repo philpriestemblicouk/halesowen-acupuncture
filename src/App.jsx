@@ -614,6 +614,8 @@ function AdminPanel({ onLogout }) {
   const [editErr,setEditErr]=useState(""); const [editOk,setEditOk]=useState("");
   const [pName,setPName]=useState(""); const [pEmail,setPEmail]=useState(""); const [pPhone,setPPhone]=useState(""); const [pHasInitial,setPHasInitial]=useState(false);
   const [patientErr,setPatientErr]=useState(""); const [patientOk,setPatientOk]=useState("");
+  const [editPatId,setEditPatId]=useState(null); const [editPatName,setEditPatName]=useState(""); const [editPatPhone,setEditPatPhone]=useState(""); const [editPatNotes,setEditPatNotes]=useState(""); const [editPatInit,setEditPatInit]=useState(false); const [editPatErr,setEditPatErr]=useState(""); const [editPatOk,setEditPatOk]=useState("");
+  const [aPatientId,setAPatientId]=useState("");
   const [schedEdits,setSchedEdits]=useState({}); const [schedSaving,setSchedSaving]=useState(null); const [schedSaveOk,setSchedSaveOk]=useState("");
 
   const loadAll=async()=>{ setLoading(true); const [bk,pt,sc,sd]=await Promise.all([getAllBookings(),getAllUsers(),getSchedule(),getScheduleDates()]); setBookings(bk); setPatients(pt); setSchedule(sc); setScheduleDates(sd); setLoading(false); };
@@ -711,22 +713,33 @@ function AdminPanel({ onLogout }) {
 
   const addBooking=async()=>{
     setAddErr(""); setAddOk("");
-    const emailVal=aEmail.trim().toLowerCase(); const nameVal=aName.trim();
-    if(!nameVal&&!emailVal){ setAddErr("Enter patient name or email."); return; }
     if(!aDate||!aTime){ setAddErr("Select a date and time."); return; }
     let u=null;
-    if(emailVal){ u=await getUser(emailVal); if(!u) u=await createUser(emailVal,nameVal||emailVal,""); }
-    else { u=await createUser(makePlaceholderEmail(),nameVal,""); }
-    if(!u){ setAddErr("Failed to create patient record."); return; }
-    const booking={ id:"ACP-"+Math.random().toString(36).substring(2,8).toUpperCase(), treatment:aTreat.name, practitioner:"Lucy Priest", date:`${MONTHS[aMonth]} ${aDate}, ${aYear}`, time:aTime, deposit_paid:0, notes:aNotes, source:"admin", patient_name:u.name||nameVal||emailVal, patient_email:u.email };
+    if(aPatientId){
+      u=patients.find(p=>p.id===aPatientId);
+      if(!u){ setAddErr("Selected patient not found."); return; }
+      if(aNotes.trim()) await supabase.from("users").update({notes:aNotes.trim()}).eq("id",u.id);
+    } else {
+      const emailVal=aEmail.trim().toLowerCase(); const nameVal=aName.trim();
+      if(!nameVal&&!emailVal){ setAddErr("Select a patient or enter a name."); return; }
+      if(emailVal){ u=await getUser(emailVal); if(!u) u=await createUser(emailVal,nameVal||emailVal,""); }
+      else { u=await createUser(makePlaceholderEmail(),nameVal,""); }
+    }
+    if(!u){ setAddErr("Failed to find/create patient record."); return; }
+    const patName=isManualEmail(u.email)?u.name.split(" — ")[0]:u.name;
+    const booking={ id:"ACP-"+Math.random().toString(36).substring(2,8).toUpperCase(), treatment:aTreat.name, practitioner:"Lucy Priest", date:`${MONTHS[aMonth]} ${aDate}, ${aYear}`, time:aTime, deposit_paid:0, notes:aNotes, source:"admin", patient_name:patName||u.name, patient_email:u.email };
     const saveErr=await insertBooking(booking);
     if(saveErr){ setAddErr(`Failed to save: ${saveErr}`); return; }
     if(aTreat.initialOnly||aTreat.requiresInitial) await updateUserInitial(u.email);
-    if(u.phone) apiPost('/api/confirm-booking',{ phone:u.phone, name:u.name, treatment:aTreat.name, date:`${MONTHS[aMonth]} ${aDate}, ${aYear}`, time:aTime, ref:booking.id, deposit:0 });
-    setAddOk(`✓ Booking ${booking.id} added for ${u.name}`);
-    setADate(null); setATime(null); setANotes(""); setAEmail(""); setAName("");
+    if(u.phone) apiPost('/api/confirm-booking',{ phone:u.phone, name:patName, treatment:aTreat.name, date:`${MONTHS[aMonth]} ${aDate}, ${aYear}`, time:aTime, ref:booking.id, deposit:0 });
+    setAddOk(`✓ Booking ${booking.id} added for ${patName||u.name}`);
+    setADate(null); setATime(null); setANotes(""); setAEmail(""); setAName(""); setAPatientId("");
     loadAll();
   };
+
+  const openEditPat=(p)=>{ const noEmail=isManualEmail(p.email); const name=noEmail?p.name.split(" — ")[0]:p.name; const phone=p.phone||(noEmail&&p.name.includes(" — ")?p.name.split(" — ")[1]:"")||""; setEditPatId(p.id); setEditPatName(name); setEditPatPhone(phone); setEditPatNotes(p.notes||""); setEditPatInit(p.has_initial||false); setEditPatErr(""); setEditPatOk(""); };
+
+  const handleSavePatient=async()=>{ setEditPatErr(""); setEditPatOk(""); if(!editPatName.trim()){ setEditPatErr("Name is required."); return; } const { error }=await supabase.from("users").update({ name:editPatName.trim(), phone:editPatPhone.trim()||null, notes:editPatNotes.trim()||null, has_initial:editPatInit }).eq("id",editPatId); if(error){ setEditPatErr("Failed to save."); return; } setEditPatOk("✓ Saved"); setTimeout(()=>{ setEditPatId(null); setEditPatOk(""); loadAll(); },700); };
 
   const handleDeletePatient=async(patientId,patientName,patientEmail)=>{
     if(patientEmail==="admin@halesowenacupuncture.co.uk") return;
@@ -741,7 +754,7 @@ function AdminPanel({ onLogout }) {
     const emailVal=pEmail.trim().toLowerCase();
     if(emailVal){ const existing=await getUser(emailVal); if(existing){ setPatientErr("A patient with this email already exists."); return; } }
     const storeEmail=emailVal||makePlaceholderEmail();
-    const u=await createUser(storeEmail,pName.trim()+(pPhone.trim()?` — ${pPhone.trim()}`:""),"");
+    const u=await createUser(storeEmail,pName.trim(),"",pPhone.trim()||null);
     if(!u){ setPatientErr("Failed to add patient. Please try again."); return; }
     if(pHasInitial) await updateUserInitial(storeEmail);
     setPatientOk(`✓ ${pName} added successfully.`);
@@ -973,17 +986,39 @@ function AdminPanel({ onLogout }) {
             {patients.map(p=>{
               const noEmail=isManualEmail(p.email);
               const displayName=noEmail?p.name.split(" — ")[0]:p.name;
-              const displayPhone=noEmail&&p.name.includes(" — ")?p.name.split(" — ")[1]:null;
+              const displayPhone=p.phone||(noEmail&&p.name.includes(" — ")?p.name.split(" — ")[1]:null);
+              const isEditing=editPatId===p.id;
+              const isAdmin=p.email==="admin@halesowenacupuncture.co.uk";
               return (
-                <div key={p.id||p.email} style={{padding:"14px",borderRadius:"10px",background:"rgba(0,0,0,0.02)",border:"1px solid rgba(200,160,64,0.1)",marginBottom:"8px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}} className="patient-row">
-                  <div>
-                    <div style={{fontSize:"13px",color:C.text,marginBottom:"2px"}}>{displayName}</div>
-                    <div style={{fontSize:"12px",color:C.muted}}>{noEmail?"No email"+(displayPhone?" · "+displayPhone:""):p.email}</div>
+                <div key={p.id||p.email} style={{borderRadius:"10px",border:`1px solid ${isEditing?C.bord2:"rgba(200,160,64,0.1)"}`,marginBottom:"8px",overflow:"hidden"}}>
+                  <div style={{padding:"14px",background:"rgba(0,0,0,0.02)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}} className="patient-row">
+                    <div>
+                      <div style={{fontSize:"13px",color:C.text,marginBottom:"2px"}}>{displayName}</div>
+                      <div style={{fontSize:"12px",color:C.muted}}>{noEmail?"No email"+(displayPhone?" · "+displayPhone:""):p.email}{displayPhone&&!noEmail?" · "+displayPhone:""}</div>
+                      {p.notes&&!isEditing&&<div style={{fontSize:"11px",color:C.muted,marginTop:"3px",fontStyle:"italic"}}>"{p.notes}"</div>}
+                    </div>
+                    <div style={{display:"flex",gap:"8px",alignItems:"center",flexShrink:0}}>
+                      <span style={SS.badge(p.has_initial)}>{p.has_initial?"✓ Initial Complete":"Awaiting Initial"}</span>
+                      {!isAdmin&&<button onClick={()=>isEditing?setEditPatId(null):openEditPat(p)} style={{padding:"5px 12px",background:isEditing?"rgba(122,92,14,0.1)":"transparent",border:`1px solid ${C.bord2}`,borderRadius:"6px",color:C.acc,cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>{isEditing?"Cancel":"Edit"}</button>}
+                      {!isAdmin&&!isEditing&&<button onClick={()=>handleDeletePatient(p.id,displayName,p.email)} style={{padding:"5px 12px",background:"transparent",border:"1px solid rgba(184,50,50,0.28)",borderRadius:"6px",color:"#b83232",cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>Delete</button>}
+                    </div>
                   </div>
-                  <div style={{display:"flex",gap:"8px",alignItems:"center",flexShrink:0}}>
-                    <span style={SS.badge(p.has_initial)}>{p.has_initial?"✓ Initial Complete":"Awaiting Initial"}</span>
-                    {p.email!=="admin@halesowenacupuncture.co.uk"&&<button onClick={()=>handleDeletePatient(p.id,displayName,p.email)} style={{padding:"5px 12px",background:"transparent",border:"1px solid rgba(255,100,100,0.3)",borderRadius:"6px",color:"#b83232",cursor:"pointer",fontSize:"11px",fontFamily:"Georgia,serif"}}>Delete</button>}
-                  </div>
+                  {isEditing&&(
+                    <div style={{padding:"16px",borderTop:`1px solid ${C.bord}`,background:"rgba(122,92,14,0.03)"}}>
+                      <div style={SS.r2} className="r2">
+                        <div style={SS.ig}><label style={SS.lbl}>Full Name *</label><input style={SS.inp} value={editPatName} onChange={e=>setEditPatName(e.target.value)}/></div>
+                        <div style={SS.ig}><label style={SS.lbl}>Phone</label><input style={SS.inp} value={editPatPhone} onChange={e=>setEditPatPhone(e.target.value)} placeholder="+44 7700 000000"/></div>
+                      </div>
+                      <div style={SS.ig}><label style={SS.lbl}>Patient Notes</label><textarea style={{...SS.inp,resize:"vertical",minHeight:"60px"}} value={editPatNotes} onChange={e=>setEditPatNotes(e.target.value)} placeholder="Allergies, conditions, preferences…"/></div>
+                      <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px",cursor:"pointer"}} onClick={()=>setEditPatInit(v=>!v)}>
+                        <div style={{width:"18px",height:"18px",borderRadius:"4px",border:`1px solid ${editPatInit?C.acc:"rgba(200,160,64,0.35)"}`,background:editPatInit?"rgba(200,160,64,0.15)":"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",color:C.acc}}>{editPatInit?"✓":""}</div>
+                        <span style={{fontSize:"12px",color:C.muted}}>Initial consultation completed</span>
+                      </div>
+                      {editPatErr&&<div style={SS.err}>{editPatErr}</div>}
+                      {editPatOk&&<div style={{color:"#2d8a2d",fontSize:"12px",marginBottom:"8px"}}>{editPatOk}</div>}
+                      <button style={{...SS.btnP(true),padding:"8px 20px",fontSize:"11px"}} onClick={handleSavePatient}>Save Changes</button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -996,11 +1031,25 @@ function AdminPanel({ onLogout }) {
               <div style={{...SS.secT,margin:0}}>Add Appointment Manually</div>
               <div style={{padding:"4px 10px",background:"rgba(200,160,64,0.1)",border:"1px solid rgba(200,160,64,0.35)",borderRadius:"6px",fontSize:"10px",color:C.acc,letterSpacing:"1px"}}>Admin Override Active</div>
             </div>
-            <div style={{background:"rgba(42,143,160,0.06)",border:"1px solid rgba(200,160,64,0.15)",borderRadius:"8px",padding:"10px 14px",marginBottom:"16px",fontSize:"11px",color:C.muted}}>All treatments are available regardless of patient history. Email is optional for walk-in or phone patients.</div>
-            <div style={SS.r2} className="r2">
-              <div style={SS.ig}><label style={SS.lbl}>Patient Name *</label><input style={SS.inp} value={aName} onChange={e=>setAName(e.target.value)} placeholder="Jane Smith"/></div>
-              <div style={SS.ig}><label style={SS.lbl}>Email (optional)</label><input style={SS.inp} value={aEmail} onChange={e=>setAEmail(e.target.value)} placeholder="jane@example.com"/></div>
+            <div style={SS.ig}>
+              <label style={SS.lbl}>Patient</label>
+              <select style={{...SS.inp,appearance:"none"}} value={aPatientId} onChange={e=>{ const id=e.target.value; setAPatientId(id); if(id){ const p=patients.find(x=>x.id===id); if(p){ const nm=isManualEmail(p.email)?p.name.split(" — ")[0]:p.name; setAName(nm); setAEmail(isManualEmail(p.email)?"":p.email); } } else { setAName(""); setAEmail(""); } }}>
+                <option value="">— Walk-in / New Patient —</option>
+                {patients.filter(p=>p.email!=="admin@halesowenacupuncture.co.uk").map(p=>{ const nm=isManualEmail(p.email)?p.name.split(" — ")[0]:p.name; return <option key={p.id} value={p.id}>{nm}{!isManualEmail(p.email)?` (${p.email})`:""}</option>; })}
+              </select>
             </div>
+            {!aPatientId&&(
+              <div style={SS.r2} className="r2">
+                <div style={SS.ig}><label style={SS.lbl}>Name *</label><input style={SS.inp} value={aName} onChange={e=>setAName(e.target.value)} placeholder="Jane Smith"/></div>
+                <div style={SS.ig}><label style={SS.lbl}>Email (optional)</label><input style={SS.inp} value={aEmail} onChange={e=>setAEmail(e.target.value)} placeholder="jane@example.com"/></div>
+              </div>
+            )}
+            {aPatientId&&(()=>{ const p=patients.find(x=>x.id===aPatientId); return p&&(p.phone||p.notes)&&(
+              <div style={{background:"rgba(122,92,14,0.05)",border:`1px solid ${C.bord}`,borderRadius:"8px",padding:"10px 14px",marginBottom:"16px",fontSize:"12px",color:C.muted}}>
+                {p.phone&&<div>📞 {p.phone}</div>}
+                {p.notes&&<div style={{marginTop:"4px",fontStyle:"italic"}}>"{p.notes}"</div>}
+              </div>
+            ); })()}
             <div style={SS.ig}><label style={SS.lbl}>Treatment *</label>
               <select style={{...SS.inp,appearance:"none"}} value={aTreat.id} onChange={e=>{setATreat(TREATMENTS.find(t=>t.id===parseInt(e.target.value)));setADate(null);setATime(null);}}>
                 {TREATMENTS.map(t=><option key={t.id} value={t.id}>{t.name} — {t.displayDuration} (£{t.price})</option>)}
@@ -1033,7 +1082,7 @@ function AdminPanel({ onLogout }) {
                 ); })}
               </div>
             </>}
-            <div style={SS.ig}><label style={SS.lbl}>Internal Notes</label><textarea style={{...SS.inp,resize:"vertical",minHeight:"60px"}} value={aNotes} onChange={e=>setANotes(e.target.value)} placeholder="Any notes for this appointment…"/></div>
+            <div style={SS.ig}><label style={SS.lbl}>{aPatientId?"Update Patient Notes":"Internal Notes"}</label><textarea style={{...SS.inp,resize:"vertical",minHeight:"60px"}} value={aNotes} onChange={e=>setANotes(e.target.value)} placeholder={aPatientId?"Update patient notes (saved to patient record)…":"Any notes for this appointment…"}/></div>
             {addErr&&<div style={SS.err}>{addErr}</div>}
             {addOk&&<div style={{color:"#2d8a2d",fontSize:"12px",marginBottom:"8px"}}>{addOk}</div>}
             <button style={SS.btnP(true)} onClick={addBooking}>Add Appointment</button>
