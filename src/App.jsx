@@ -110,6 +110,15 @@ async function getSchedule() {
   const { data } = await supabase.from("schedule").select("*").order("day_of_week");
   return data || [];
 }
+async function getScheduleDates() {
+  const { data } = await supabase.from("schedule_dates").select("*");
+  return data || [];
+}
+function effectiveSched(dateStr, dow, scheduleDates, schedule) {
+  const override = scheduleDates.find(sd => sd.date === dateStr);
+  if (override) return override;
+  return schedule.find(s => s.day_of_week === dow) || null;
+}
 async function saveScheduleDay(dayOfWeek, startTime, endTime, isActive) {
   const { data: existing } = await supabase.from("schedule").select("id").eq("day_of_week", dayOfWeek).single();
   if (existing) {
@@ -319,29 +328,30 @@ function BookingFlow({ user, onLogout }) {
   const [form,setForm]=useState({name:user.name,email:user.email,phone:user.phone||"",notes:""});
   const [card,setCard]=useState({number:"",expiry:"",cvc:"",nameOnCard:""});
   const [processing,setProc]=useState(false); const [confirmed,setConfirmed]=useState(false);
-  const [hasInitial,setHasInit]=useState(false); const [schedule,setSchedule]=useState([]);
+  const [hasInitial,setHasInit]=useState(false); const [schedule,setSchedule]=useState([]); const [scheduleDates,setScheduleDates]=useState([]);
   const [bookingRef,setBookingRef]=useState("");
 
   useEffect(()=>{
     getUser(user.email).then(u=>{ if(u){ setHasInit(u.has_initial||false); if(u.phone) setForm(f=>({...f,phone:u.phone})); } });
     getSchedule().then(setSchedule);
+    getScheduleDates().then(setScheduleDates);
   },[user.email]);
 
   useEffect(()=>{
-    if(!selDate||!treatment||schedule.length===0) return;
+    if(!selDate||!treatment||(schedule.length===0&&scheduleDates.length===0)) return;
     const dow = new Date(viewYear,viewMonth,selDate).getDay();
-    const daySched = schedule.find(s=>s.day_of_week===dow);
+    const dateStr = `${MONTHS[viewMonth]} ${selDate}, ${viewYear}`;
+    const daySched = effectiveSched(dateStr, dow, scheduleDates, schedule);
     if(!daySched||!daySched.is_active){ setSlots([]); return; }
     const avail = generateSlots(daySched.start_time, daySched.end_time, treatment.duration);
     setSlots(avail);
-    const dateStr = `${MONTHS[viewMonth]} ${selDate}, ${viewYear}`;
-    getBookingsForDate(dateStr).then(ex=>setBlocked(getBlockedSlots(ex, avail, treatment.duration)));
-  },[selDate,treatment,schedule,viewMonth,viewYear]);
+    getBookingsForDate(dateStr).then(ex=>setBlocked(getBlockedSlots(ex.filter(b=>b.source!=='blocked'), avail, treatment.duration)));
+  },[selDate,treatment,schedule,scheduleDates,viewMonth,viewYear]);
 
   const depositAmt = treatment ? treatment.deposit : 0;
   const isToday  = (d)=>d===today.getDate()&&viewMonth===today.getMonth()&&viewYear===today.getFullYear();
   const isPast   = (d)=>{ const dt=new Date(viewYear,viewMonth,d); dt.setHours(0,0,0,0); const t=new Date(); t.setHours(0,0,0,0); return dt<t; };
-  const isUnavail= (d)=>{ const dow=new Date(viewYear,viewMonth,d).getDay(); const s=schedule.find(x=>x.day_of_week===dow); return !s||!s.is_active; };
+  const isUnavail= (d)=>{ const dow=new Date(viewYear,viewMonth,d).getDay(); const dateStr=`${MONTHS[viewMonth]} ${d}, ${viewYear}`; const s=effectiveSched(dateStr,dow,scheduleDates,schedule); return !s||!s.is_active; };
   const prevMonth=()=>{ if(viewMonth===0){setVM(11);setVY(y=>y-1);}else setVM(m=>m-1); setSelDate(null);setSelTime(null); };
   const nextMonth=()=>{ if(viewMonth===11){setVM(0);setVY(y=>y+1);}else setVM(m=>m+1); setSelDate(null);setSelTime(null); };
   const fmtCard=(v)=>v.replace(/\D/g,"").replace(/(.{4})/g,"$1 ").trim().slice(0,19);
@@ -593,7 +603,7 @@ function AdminPanel({ onLogout }) {
   const [aDate,setADate]=useState(null); const [aTime,setATime]=useState(null);
   const [aSlots,setASlots]=useState([]); const [aBlocked,setABlocked]=useState(new Set());
   const [aNotes,setANotes]=useState(""); const [addErr,setAddErr]=useState(""); const [addOk,setAddOk]=useState("");
-  const [schedule,setSchedule]=useState([]);
+  const [schedule,setSchedule]=useState([]); const [scheduleDates,setScheduleDates]=useState([]);
   const [showAddPatient,setShowAddPatient]=useState(false);
   const [calMonth,setCalMonth]=useState(today.getMonth()); const [calYear,setCalYear]=useState(today.getFullYear());
   const [selCalDate,setSelCalDate]=useState(null); const [calSlots,setCalSlots]=useState([]);
@@ -606,25 +616,19 @@ function AdminPanel({ onLogout }) {
   const [patientErr,setPatientErr]=useState(""); const [patientOk,setPatientOk]=useState("");
   const [schedEdits,setSchedEdits]=useState({}); const [schedSaving,setSchedSaving]=useState(null); const [schedSaveOk,setSchedSaveOk]=useState("");
 
-  const loadAll=async()=>{ setLoading(true); setBookings(await getAllBookings()); setPatients(await getAllUsers()); setSchedule(await getSchedule()); setLoading(false); };
+  const loadAll=async()=>{ setLoading(true); const [bk,pt,sc,sd]=await Promise.all([getAllBookings(),getAllUsers(),getSchedule(),getScheduleDates()]); setBookings(bk); setPatients(pt); setSchedule(sc); setScheduleDates(sd); setLoading(false); };
   useEffect(()=>{ loadAll(); },[]);
-  useEffect(()=>{
-    if(!schedule.length) return;
-    const init={};
-    for(let d=0;d<=6;d++){ const row=schedule.find(s=>s.day_of_week===d); init[d]={is_active:row?row.is_active:(d>=2&&d<=4),start_time:row?row.start_time:"09:00",end_time:row?row.end_time:"17:00"}; }
-    setSchedEdits(init);
-  },[schedule]);
 
   useEffect(()=>{
-    if(!aDate||!aTreat||schedule.length===0) return;
+    if(!aDate||!aTreat) return;
     const dow=new Date(aYear,aMonth,aDate).getDay();
-    const daySched=schedule.find(s=>s.day_of_week===dow);
+    const dateStr=`${MONTHS[aMonth]} ${aDate}, ${aYear}`;
+    const daySched=effectiveSched(dateStr,dow,scheduleDates,schedule);
     if(!daySched||!daySched.is_active){ setASlots([]); return; }
     const avail=generateSlots(daySched.start_time,daySched.end_time,aTreat.duration);
     setASlots(avail);
-    const dateStr=`${MONTHS[aMonth]} ${aDate}, ${aYear}`;
-    getBookingsForDate(dateStr).then(ex=>setABlocked(getBlockedSlots(ex,avail,aTreat.duration)));
-  },[aDate,aTreat,schedule,aMonth,aYear]);
+    getBookingsForDate(dateStr).then(ex=>setABlocked(getBlockedSlots(ex.filter(b=>b.source!=='blocked'),avail,aTreat.duration)));
+  },[aDate,aTreat,schedule,scheduleDates,aMonth,aYear]);
 
   const prevM=()=>{ if(aMonth===0){setAMonth(11);setAYear(y=>y-1);}else setAMonth(m=>m-1); setADate(null);setATime(null); };
   const nextM=()=>{ if(aMonth===11){setAMonth(0);setAYear(y=>y+1);}else setAMonth(m=>m+1); setADate(null);setATime(null); };
@@ -635,10 +639,10 @@ function AdminPanel({ onLogout }) {
   const bookingsByDate=bookings.reduce((acc,b)=>{ (acc[b.date]=acc[b.date]||[]).push(b); return acc; },{});
 
   useEffect(()=>{
-    if(!selCalDate||schedule.length===0) return;
+    if(!selCalDate) return;
     const dow=new Date(calYear,calMonth,selCalDate).getDay();
-    const daySched=schedule.find(s=>s.day_of_week===dow);
     const dateStr=`${MONTHS[calMonth]} ${selCalDate}, ${calYear}`;
+    const daySched=effectiveSched(dateStr,dow,scheduleDates,schedule);
     const dayBookings=bookingsByDate[dateStr]||[];
     if(!daySched||!daySched.is_active){
       setCalSlots(dayBookings.map(b=>({ slot:b.time, booking:b, isStart:true })));
@@ -653,19 +657,19 @@ function AdminPanel({ onLogout }) {
       }
       return { slot:slotStr, booking:null, isStart:false };
     }));
-  },[selCalDate,calMonth,calYear,schedule,bookings]);
+  },[selCalDate,calMonth,calYear,schedule,scheduleDates,bookings]);
 
   useEffect(()=>{
-    if(!editDate||!selBooking||schedule.length===0) return;
+    if(!editDate||!selBooking) return;
     const dow=new Date(editYear,editMonth,editDate).getDay();
-    const daySched=schedule.find(s=>s.day_of_week===dow);
+    const dateStr=`${MONTHS[editMonth]} ${editDate}, ${editYear}`;
+    const daySched=effectiveSched(dateStr,dow,scheduleDates,schedule);
     if(!daySched||!daySched.is_active){ setEditSlots([]); return; }
     const dur=TREATMENTS.find(t=>t.name===selBooking.treatment)?.duration||60;
     const avail=generateSlots(daySched.start_time,daySched.end_time,dur);
     setEditSlots(avail);
-    const dateStr=`${MONTHS[editMonth]} ${editDate}, ${editYear}`;
     getBookingsForDate(dateStr).then(ex=>{
-      const others=ex.filter(b=>b.id!==selBooking.id);
+      const others=ex.filter(b=>b.id!==selBooking.id&&b.source!=='blocked');
       setEditBlocked(getBlockedSlots(others,avail,dur));
     });
   },[editDate,editMonth,editYear,selBooking,schedule]);
@@ -673,7 +677,8 @@ function AdminPanel({ onLogout }) {
   const prevEditM=()=>{ if(editMonth===0){setEditMonth(11);setEditYear(y=>y-1);}else setEditMonth(m=>m-1); setEditDate(null);setEditTime(null); };
   const nextEditM=()=>{ if(editMonth===11){setEditMonth(0);setEditYear(y=>y+1);}else setEditMonth(m=>m+1); setEditDate(null);setEditTime(null); };
 
-  const saveSchedDay=async(dow)=>{ setSchedSaving(dow); setSchedSaveOk(""); const e=schedEdits[dow]; await saveScheduleDay(dow,e.start_time,e.end_time,e.is_active); setSchedSaving(null); setSchedSaveOk(`${DAY_NAMES[dow]} saved!`); setTimeout(()=>setSchedSaveOk(""),2500); loadAll(); };
+  const saveSchedDate=async(dateStr)=>{ setSchedSaving(dateStr); setSchedSaveOk(""); const e=schedEdits[dateStr]; await apiPost('/api/save-schedule-date',{date:dateStr,start_time:e.start_time,end_time:e.end_time,is_active:e.is_active}); setSchedSaving(null); setSchedSaveOk("Saved!"); setTimeout(()=>setSchedSaveOk(""),2500); loadAll(); };
+  const resetSchedDate=async(dateStr)=>{ await apiPost('/api/save-schedule-date',{date:dateStr,delete:true}); setSchedEdits(prev=>{const n={...prev};delete n[dateStr];return n;}); setSchedSaveOk("Reset to default"); setTimeout(()=>setSchedSaveOk(""),2500); loadAll(); };
 
   const toggleBlockSlot=async(slotStr, existingBooking)=>{
     if(existingBooking){
@@ -788,7 +793,7 @@ function AdminPanel({ onLogout }) {
                   const isSel=selCalDate===d;
                   const isToday=d===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
                   const dow=new Date(calYear,calMonth,d).getDay();
-                  const hasSched=schedule.find(s=>s.day_of_week===dow&&s.is_active);
+                  const hasSched=effectiveSched(`${MONTHS[calMonth]} ${d}, ${calYear}`,dow,scheduleDates,schedule)?.is_active;
                   return (
                     <div key={d} onClick={()=>setSelCalDate(isSel?null:d)} style={{aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:"7px",cursor:"pointer",background:isSel?C.acc:"transparent",border:isToday&&!isSel?`1px solid rgba(200,160,64,0.4)`:"1px solid transparent",color:isSel?C.dark:hasSched?"#c8c0b0":"rgba(255,255,255,0.2)"}}>
                       <span style={{fontSize:"12px",fontWeight:isSel||isToday?"bold":"normal"}}>{d}</span>
@@ -841,24 +846,35 @@ function AdminPanel({ onLogout }) {
                   </div>
 
                   {/* Inline schedule editor */}
-                  {(()=>{ const dow=new Date(calYear,calMonth,selCalDate).getDay(); const e=schedEdits[dow]||{is_active:false,start_time:"09:00",end_time:"17:00"}; const tOpts=[]; for(let m=6*60;m<=22*60;m+=30) tOpts.push(minsTo24(m)); return (
+                  {(()=>{
+                    const dow=new Date(calYear,calMonth,selCalDate).getDay();
+                    const dateStr=`${MONTHS[calMonth]} ${selCalDate}, ${calYear}`;
+                    const hasOverride=scheduleDates.some(sd=>sd.date===dateStr);
+                    const defSched=schedule.find(s=>s.day_of_week===dow);
+                    const fallback={is_active:defSched?defSched.is_active:(dow>=2&&dow<=4),start_time:defSched?defSched.start_time:"09:00",end_time:defSched?defSched.end_time:"17:00"};
+                    const e=schedEdits[dateStr]||fallback;
+                    const tOpts=[]; for(let m=6*60;m<=22*60;m+=30) tOpts.push(minsTo24(m));
+                    return (
                     <div style={{marginTop:"16px",paddingTop:"14px",borderTop:"1px solid rgba(200,160,64,0.08)"}}>
-                      <div style={{fontSize:"9px",letterSpacing:"2px",color:C.acc,textTransform:"uppercase",marginBottom:"10px"}}>Working Hours · {DAY_NAMES[dow]}s</div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
+                        <div style={{fontSize:"9px",letterSpacing:"2px",color:C.acc,textTransform:"uppercase"}}>{MONTHS[calMonth]} {selCalDate} — Hours</div>
+                        {hasOverride&&<button onClick={()=>resetSchedDate(dateStr)} style={{background:"none",border:"none",color:C.muted,fontSize:"10px",cursor:"pointer",textDecoration:"underline"}}>Reset to default</button>}
+                      </div>
                       <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
-                        <div style={{width:"36px",height:"20px",borderRadius:"10px",background:e.is_active?C.acc:"rgba(255,255,255,0.1)",cursor:"pointer",position:"relative"}} onClick={()=>setSchedEdits(prev=>({...prev,[dow]:{...prev[dow],is_active:!e.is_active}}))}>
+                        <div style={{width:"36px",height:"20px",borderRadius:"10px",background:e.is_active?C.acc:"rgba(255,255,255,0.1)",cursor:"pointer",position:"relative"}} onClick={()=>setSchedEdits(prev=>({...prev,[dateStr]:{...e,is_active:!e.is_active}}))}>
                           <div style={{position:"absolute",top:"2px",left:e.is_active?"18px":"2px",width:"16px",height:"16px",borderRadius:"50%",background:"white",transition:"left 0.2s"}}/>
                         </div>
                         <span style={{fontSize:"12px",color:e.is_active?"#f0ebe0":C.muted,minWidth:"44px"}}>{e.is_active?"Open":"Closed"}</span>
                         {e.is_active&&<>
-                          <select style={{...SS.inp,width:"88px",padding:"6px 8px",appearance:"none"}} value={e.start_time} onChange={ev=>setSchedEdits(prev=>({...prev,[dow]:{...prev[dow],start_time:ev.target.value}}))}>
+                          <select style={{...SS.inp,width:"88px",padding:"6px 8px",appearance:"none"}} value={e.start_time} onChange={ev=>setSchedEdits(prev=>({...prev,[dateStr]:{...e,start_time:ev.target.value}}))}>
                             {tOpts.map(t=><option key={t} value={t}>{t}</option>)}
                           </select>
                           <span style={{color:C.muted,fontSize:"12px"}}>→</span>
-                          <select style={{...SS.inp,width:"88px",padding:"6px 8px",appearance:"none"}} value={e.end_time} onChange={ev=>setSchedEdits(prev=>({...prev,[dow]:{...prev[dow],end_time:ev.target.value}}))}>
+                          <select style={{...SS.inp,width:"88px",padding:"6px 8px",appearance:"none"}} value={e.end_time} onChange={ev=>setSchedEdits(prev=>({...prev,[dateStr]:{...e,end_time:ev.target.value}}))}>
                             {tOpts.map(t=><option key={t} value={t}>{t}</option>)}
                           </select>
                         </>}
-                        <button style={{...SS.btnP(true),padding:"6px 14px",fontSize:"11px"}} onClick={()=>saveSchedDay(dow)}>{schedSaving===dow?"Saving…":"Save Hours"}</button>
+                        <button style={{...SS.btnP(true),padding:"6px 14px",fontSize:"11px"}} onClick={()=>saveSchedDate(dateStr)}>{schedSaving===dateStr?"Saving…":"Save"}</button>
                         {schedSaveOk&&<span style={{fontSize:"11px",color:"#6dd06d"}}>{schedSaveOk}</span>}
                       </div>
                     </div>
@@ -897,7 +913,7 @@ function AdminPanel({ onLogout }) {
                             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"2px"}}>
                               {DAY_SHORT.map(d=><div key={d} style={{textAlign:"center",fontSize:"9px",color:C.muted,padding:"2px 0"}}>{d}</div>)}
                               {Array.from({length:getFirstDay(editYear,editMonth)}).map((_,i)=><div key={"e"+i}/>)}
-                              {Array.from({length:getDaysInMonth(editYear,editMonth)}).map((_,i)=>{ const d=i+1; const sel=editDate===d; const dow2=new Date(editYear,editMonth,d).getDay(); const hasSch=schedule.find(s=>s.day_of_week===dow2&&s.is_active); return (
+                              {Array.from({length:getDaysInMonth(editYear,editMonth)}).map((_,i)=>{ const d=i+1; const sel=editDate===d; const dow2=new Date(editYear,editMonth,d).getDay(); const hasSch=effectiveSched(`${MONTHS[editMonth]} ${d}, ${editYear}`,dow2,scheduleDates,schedule)?.is_active; return (
                                 <div key={d} onClick={()=>{setEditDate(d);setEditTime(null);}} style={{aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",borderRadius:"5px",fontSize:"11px",cursor:hasSch?"pointer":"not-allowed",background:sel?C.acc:"transparent",color:sel?C.dark:hasSch?"#c8c0b0":"rgba(255,255,255,0.15)",fontWeight:sel?"bold":"normal"}}>{d}</div>
                               ); })}
                             </div>
