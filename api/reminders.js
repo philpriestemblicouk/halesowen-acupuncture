@@ -2,9 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const WINDOWS = [
-  { key: '48h', ms: 48 * 60 * 60 * 1000, label: '48 hours' },
   { key: '24h', ms: 24 * 60 * 60 * 1000, label: '24 hours' },
-  { key:  '2h', ms:  2 * 60 * 60 * 1000, label:  '2 hours' },
 ];
 const TOLERANCE = 35 * 60 * 1000; // ±35 min so hourly cron never misses a window
 
